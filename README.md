@@ -12,6 +12,11 @@ The main screen presents a quick summary of your wallet status and key actions:
 - **Primary actions**: Large buttons for **Send KOIN** and **Receive**.
 - **Security actions**: Quick access to **View Seed Phrase** and **Delete Wallet**.
 
+### Screenshot
+<p align="center">
+	<img src="assets/main_screen.png" alt="Koinos Wallet main screen" />
+</p>
+
 ## Prerequisites
 - Node.js 18+ (LTS recommended)
 - npm 9+ (or yarn/pnpm)
@@ -20,7 +25,7 @@ The main screen presents a quick summary of your wallet status and key actions:
 
 ## Setup
 ```bash
-cd /Users/pgarcgo/code/speto/koinos-wallet
+cd koinos-wallet
 npm install
 ```
 
