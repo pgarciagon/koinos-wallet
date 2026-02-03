@@ -1,5 +1,5 @@
 import { Alert, Platform } from 'react-native';
-import Clipboard from '@react-native-clipboard/clipboard';
+import * as ExpoClipboard from 'expo-clipboard';
 
 /**
  * Cross-platform alert helper
@@ -46,7 +46,7 @@ export const copyToClipboard = async (text: string): Promise<boolean> => {
     if (Platform.OS === 'web') {
       await (navigator as any).clipboard.writeText(text);
     } else {
-      Clipboard.setString(text);
+      await ExpoClipboard.setStringAsync(text);
     }
     return true;
   } catch (error) {
@@ -64,7 +64,7 @@ export const readFromClipboard = async (): Promise<string> => {
     if (Platform.OS === 'web') {
       return await (navigator as any).clipboard.readText();
     } else {
-      return await Clipboard.getString();
+      return await ExpoClipboard.getStringAsync();
     }
   } catch (error) {
     console.error('Failed to read from clipboard:', error);
