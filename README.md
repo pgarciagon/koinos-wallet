@@ -25,7 +25,7 @@ The main screen presents a quick summary of your wallet status and key actions:
 
 ## Setup
 ```bash
-cd /Users/pgarcgo/code/speto/koinos-wallet
+cd koinos-wallet
 npm install
 ```
 
