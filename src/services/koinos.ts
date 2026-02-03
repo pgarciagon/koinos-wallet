@@ -1,7 +1,9 @@
 import { Provider, Contract, Signer, utils } from 'koilib';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Default RPC endpoint
 const DEFAULT_RPC = 'https://api.koinos.io';
+const RPC_STORAGE_KEY = 'koinos_rpc_url';
 
 // Mainnet KOIN contract address (verified)
 const KOIN_CONTRACT = '19GYjDBVXU7keLbYvMLazsGQn3GTWHjHkK';
@@ -84,9 +86,27 @@ const tokenAbi = {
 
 export class KoinosService {
   private provider: Provider;
+  private rpcUrl: string;
 
   constructor(rpcUrl: string = DEFAULT_RPC) {
+    this.rpcUrl = rpcUrl;
     this.provider = new Provider(rpcUrl);
+  }
+
+  async getRpcUrl(): Promise<string> {
+    const stored = await AsyncStorage.getItem(RPC_STORAGE_KEY);
+    const nextUrl = stored || this.rpcUrl || DEFAULT_RPC;
+    if (nextUrl !== this.rpcUrl) {
+      this.rpcUrl = nextUrl;
+      this.provider = new Provider(nextUrl);
+    }
+    return this.rpcUrl;
+  }
+
+  async setRpcUrl(url: string): Promise<void> {
+    this.rpcUrl = url;
+    this.provider = new Provider(url);
+    await AsyncStorage.setItem(RPC_STORAGE_KEY, url);
   }
 
   async getChainInfo() {

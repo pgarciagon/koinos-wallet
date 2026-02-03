@@ -7,7 +7,6 @@ import {
   RefreshControl,
   ScrollView,
   Image,
-  Modal,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import koinosService from '../services/koinos';
@@ -21,8 +20,6 @@ export default function HomeScreen() {
   const [mana, setMana] = useState<{ current: string; max: string }>({ current: '0', max: '0' });
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [showSeedPhrase, setShowSeedPhrase] = useState(false);
-  const [seedPhrase, setSeedPhrase] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     try {
@@ -75,70 +72,8 @@ export default function HomeScreen() {
     return `${addr.substring(0, 8)}...${addr.substring(addr.length - 8)}`;
   };
 
-  const handleViewSeedPhrase = async () => {
-    showAlert(
-      'Security Warning',
-      'Your seed phrase gives full access to your wallet. Never share it with anyone!\n\nMake sure no one is watching your screen.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Show Seed Phrase',
-          onPress: async () => {
-            const phrase = await walletService.getSeedPhrase();
-            if (phrase) {
-              setSeedPhrase(phrase);
-              setShowSeedPhrase(true);
-            } else {
-              showAlert(
-                'Not Available',
-                'Seed phrase is not available. This wallet was imported using a private key (WIF).'
-              );
-            }
-          },
-        },
-      ]
-    );
-  };
-
-  const handleCopySeedPhrase = async () => {
-    if (seedPhrase) {
-      const success = await copyToClipboard(seedPhrase);
-      if (success) {
-        showAlert('Copied', 'Seed phrase copied to clipboard. Make sure to clear your clipboard after use!');
-      }
-    }
-  };
-
-  const handleDeleteWallet = () => {
-    showAlert(
-      'Delete Wallet?',
-      'Are you sure? Make sure you have backed up your seed phrase! This action cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            await walletService.deleteWallet();
-            navigation.replace('Welcome');
-          },
-        },
-      ]
-    );
-  };
-
   const handleSettings = () => {
-    showAlert(
-      'Wallet Settings',
-      'What would you like to do?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'View Seed Phrase',
-          onPress: handleViewSeedPhrase,
-        },
-      ]
-    );
+    navigation.navigate('Settings');
   };
 
   if (loading) {
@@ -217,68 +152,12 @@ export default function HomeScreen() {
 
       <View style={styles.settingsSection}>
         <TouchableOpacity
-          style={styles.settingsOption}
-          onPress={handleViewSeedPhrase}
+          style={styles.settingsButton}
+          onPress={handleSettings}
         >
-          <Text style={styles.settingsOptionText}>View Seed Phrase</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.settingsOption}
-          onPress={handleDeleteWallet}
-        >
-          <Text style={styles.settingsOptionTextDanger}>Delete Wallet</Text>
+          <Text style={styles.settingsButtonText}>Settings</Text>
         </TouchableOpacity>
       </View>
-
-      {/* Seed Phrase Modal */}
-      <Modal
-        visible={showSeedPhrase}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => {
-          setSeedPhrase(null);
-          setShowSeedPhrase(false);
-        }}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Your Seed Phrase</Text>
-
-            <View style={styles.warningBox}>
-              <Text style={styles.warningText}>
-                Never share this phrase with anyone! Anyone with these words can access your funds.
-              </Text>
-            </View>
-
-            <View style={styles.seedPhraseContainer}>
-              {seedPhrase?.split(' ').map((word, index) => (
-                <View key={index} style={styles.wordContainer}>
-                  <Text style={styles.wordNumber}>{index + 1}</Text>
-                  <Text style={styles.word}>{word}</Text>
-                </View>
-              ))}
-            </View>
-
-            <TouchableOpacity
-              style={styles.copyButton}
-              onPress={handleCopySeedPhrase}
-            >
-              <Text style={styles.copyButtonText}>Copy to Clipboard</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={() => {
-                setSeedPhrase(null);
-                setShowSeedPhrase(false);
-              }}
-            >
-              <Text style={styles.closeButtonText}>Close</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
     </ScrollView>
   );
 }
@@ -416,114 +295,23 @@ const styles = StyleSheet.create({
   },
   settingsSection: {
     marginTop: 10,
-    gap: 10,
+    gap: 12,
   },
-  settingsOption: {
+  settingsButton: {
     backgroundColor: '#16213e',
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
   },
-  settingsOptionText: {
+  settingsButtonText: {
     color: '#4a9eff',
     fontSize: 16,
-    fontWeight: '500',
-  },
-  settingsOptionTextDanger: {
-    color: '#ff6b6b',
-    fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   loadingText: {
     color: '#fff',
     fontSize: 18,
     textAlign: 'center',
     marginTop: 100,
-  },
-  // Modal styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.85)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  modalContent: {
-    backgroundColor: '#1a1a2e',
-    borderRadius: 20,
-    padding: 25,
-    width: '100%',
-    maxWidth: 400,
-    maxHeight: '90%',
-  },
-  modalTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
-    textAlign: 'center',
-    marginBottom: 15,
-  },
-  warningBox: {
-    backgroundColor: '#3d1a1a',
-    padding: 15,
-    borderRadius: 12,
-    marginBottom: 20,
-  },
-  warningText: {
-    color: '#ff9999',
-    fontSize: 14,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  seedPhraseContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: 8,
-    marginBottom: 20,
-  },
-  wordContainer: {
-    backgroundColor: '#16213e',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    minWidth: 90,
-  },
-  wordNumber: {
-    color: '#4a9eff',
-    fontSize: 11,
-    marginRight: 6,
-    fontWeight: '600',
-  },
-  word: {
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: '500',
-  },
-  copyButton: {
-    backgroundColor: '#4a9eff',
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  copyButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  closeButton: {
-    backgroundColor: 'transparent',
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#333',
-  },
-  closeButtonText: {
-    color: '#888',
-    fontSize: 16,
   },
 });

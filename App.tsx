@@ -7,6 +7,7 @@ import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import HomeScreen from './src/screens/HomeScreen';
 import SendScreen from './src/screens/SendScreen';
 import ReceiveScreen from './src/screens/ReceiveScreen';
+import SettingsScreen from './src/screens/SettingsScreen';
 import WelcomeScreen from './src/screens/WelcomeScreen';
 import CreateWalletScreen from './src/screens/CreateWalletScreen';
 import ImportWalletScreen from './src/screens/ImportWalletScreen';
@@ -19,6 +20,7 @@ export type RootStackParamList = {
   Home: undefined;
   Send: undefined;
   Receive: { address: string };
+  Settings: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -59,6 +61,7 @@ export default function App() {
         <Stack.Screen name="ImportWallet" component={ImportWalletScreen} />
         <Stack.Screen name="Home" component={HomeScreen} />
         <Stack.Screen name="Send" component={SendScreen} />
+        <Stack.Screen name="Settings" component={SettingsScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
