@@ -23,7 +23,17 @@ describe('Wallet Integration Tests', () => {
 
       expect(words.length).toBe(12);
       expect(bip39.validateMnemonic(mnemonic)).toBe(true);
-      console.log('Generated 12-word mnemonic (first 3 words):', words.slice(0, 3).join(' '), '...');
+      
+      // Each word should be from BIP-39 wordlist (lowercase, alphabetic)
+      words.forEach(word => {
+        expect(word).toMatch(/^[a-z]+$/);
+        expect(word.length).toBeGreaterThanOrEqual(3);
+        expect(word.length).toBeLessThanOrEqual(8);
+      });
+      
+      // Generated mnemonics should be unique (entropy test)
+      const mnemonic2 = bip39.generateMnemonic(128);
+      expect(mnemonic2).not.toBe(mnemonic);
     });
 
     it('generates valid 24-word mnemonic', () => {
@@ -64,12 +74,17 @@ describe('Wallet Integration Tests', () => {
 
       const address = signer.getAddress();
 
+      // Address should have valid format
       expect(address).toBeDefined();
       expect(address.length).toBeGreaterThan(25);
       expect(address.length).toBeLessThan(36);
-      console.log('Derived Koinos address:', address);
+      expect(address).toMatch(/^1[1-9A-HJ-NP-Za-km-z]+$/);
+      
+      // Known expected address for this test mnemonic (deterministic)
+      // This validates that derivation path is Kondor-compatible
+      expect(address).toBe('1DFF1akeStY8SfomzFsSYsZPesQcbnF1vR');
 
-      // Derive again - should be identical
+      // Derive again - should be identical (deterministic)
       const hdNode2 = ethers.utils.HDNode.fromMnemonic(TEST_MNEMONIC);
       const derived2 = hdNode2.derivePath(derivationPath);
       const signer2 = new Signer({
@@ -96,9 +111,11 @@ describe('Wallet Integration Tests', () => {
       // All addresses should be unique
       const uniqueAddresses = new Set(addresses);
       expect(uniqueAddresses.size).toBe(3);
-      console.log('Account 0:', addresses[0]);
-      console.log('Account 1:', addresses[1]);
-      console.log('Account 2:', addresses[2]);
+      
+      // Known expected addresses for test mnemonic (deterministic)
+      expect(addresses[0]).toBe('1DFF1akeStY8SfomzFsSYsZPesQcbnF1vR');
+      expect(addresses[1]).toBe('15n9ZbL3xmLBCUFtVQUzXKox5WhFnyAba3');
+      expect(addresses[2]).toBe('16ADbKNuSCcDaapTdgAjTVpD8SjoQFTeEU');
     });
   });
 
@@ -118,15 +135,20 @@ describe('Wallet Integration Tests', () => {
       const wif = signer.getPrivateKey('wif');
       expect(wif).toBeDefined();
       expect(wif.startsWith('5') || wif.startsWith('K') || wif.startsWith('L')).toBe(true);
+      
+      // WIF should be 51-52 characters (base58 encoded)
+      expect(wif.length).toBeGreaterThanOrEqual(51);
+      expect(wif.length).toBeLessThanOrEqual(52);
 
-      // Import from WIF - should get same address
+      // Import from WIF - should get same address (round-trip)
       const importedSigner = Signer.fromWif(wif);
       expect(importedSigner.getAddress()).toBe(signer.getAddress());
-
-      console.log('WIF round-trip test passed');
+      
+      // Private key should also match
+      expect(importedSigner.getPrivateKey('wif')).toBe(wif);
     });
 
-    it('generates valid signatures', async () => {
+    it('generates valid ECDSA signatures', async () => {
       const testMnemonic = bip39.generateMnemonic(128);
       const hdNode = ethers.utils.HDNode.fromMnemonic(testMnemonic);
       const derived = hdNode.derivePath("m/44'/659'/0'/0/0");
@@ -141,8 +163,16 @@ describe('Wallet Integration Tests', () => {
       const signature = await signer.signMessage(message);
 
       expect(signature).toBeDefined();
-      expect(signature.length).toBeGreaterThan(0);
-      console.log('Message signature length:', signature.length);
+      
+      // ECDSA signature should be exactly 65 bytes (r: 32, s: 32, v: 1)
+      expect(signature.length).toBe(65);
+      
+      // Signature should be a Uint8Array
+      expect(signature).toBeInstanceOf(Uint8Array);
+      
+      // Different messages should produce different signatures
+      const signature2 = await signer.signMessage('Different message');
+      expect(signature2).not.toEqual(signature);
     });
   });
 

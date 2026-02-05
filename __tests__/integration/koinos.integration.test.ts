@@ -33,19 +33,29 @@ describe('KoinosService Integration Tests', () => {
 
       expect(info).toBeDefined();
       expect(info.head_topology).toBeDefined();
-      expect(parseInt(info.head_topology.height)).toBeGreaterThan(0);
-      console.log(`Connected to Koinos mainnet at block ${info.head_topology.height}`);
+      
+      // Block height should be a large number (mainnet has millions of blocks)
+      const height = parseInt(info.head_topology.height);
+      expect(height).toBeGreaterThan(30000000); // Mainnet is past 30M blocks
+      
+      // Block ID should be a valid hash
+      expect(info.head_topology.id).toBeDefined();
+      expect(info.head_topology.id.length).toBeGreaterThan(40);
     }, 15000); // 15 second timeout for network
   });
 
   describe('Balance Queries', () => {
-    it('fetches balance for a known address', async () => {
+    it('fetches balance for a known address with funds', async () => {
       const balance = await service.getBalance(GENESIS_ADDRESS);
 
-      // Balance should be a valid number string
+      // Balance should be a valid decimal number string
       expect(balance).toBeDefined();
-      expect(parseFloat(balance)).toBeGreaterThanOrEqual(0);
-      console.log(`Genesis address balance: ${balance} KOIN`);
+      expect(balance).toMatch(/^\d+\.\d+$/);
+      
+      // Genesis address should have some balance (known to have ~10 KOIN)
+      const balanceNum = parseFloat(balance);
+      expect(balanceNum).toBeGreaterThan(0);
+      expect(balanceNum).toBeLessThan(1000000); // Sanity check - not absurdly high
     }, 15000);
 
     it('returns 0 for address with no balance', async () => {
@@ -64,7 +74,13 @@ describe('KoinosService Integration Tests', () => {
       expect(mana).toBeDefined();
       expect(mana.current).toBeDefined();
       expect(mana.max).toBeDefined();
-      console.log(`Genesis address mana: ${mana.current} / ${mana.max}`);
+      
+      // Mana should be valid decimal numbers
+      expect(mana.current).toMatch(/^\d+\.\d+$/);
+      expect(mana.max).toMatch(/^\d+\.\d+$/);
+      
+      // Current mana should not exceed max
+      expect(parseFloat(mana.current)).toBeLessThanOrEqual(parseFloat(mana.max));
     }, 15000);
   });
 
@@ -73,9 +89,14 @@ describe('KoinosService Integration Tests', () => {
       const nonce = await service.getNonce(GENESIS_ADDRESS);
 
       expect(nonce).toBeDefined();
-      // Nonce should be a number string
-      expect(parseInt(nonce)).toBeGreaterThanOrEqual(0);
-      console.log(`Genesis address nonce: ${nonce}`);
+      
+      // Nonce should be a valid integer string
+      const nonceNum = parseInt(nonce);
+      expect(Number.isInteger(nonceNum)).toBe(true);
+      expect(nonceNum).toBeGreaterThanOrEqual(0);
+      
+      // Active address should have made at least some transactions
+      expect(nonceNum).toBeGreaterThan(0);
     }, 15000);
   });
 
