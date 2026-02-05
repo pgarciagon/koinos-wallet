@@ -47,16 +47,23 @@ import { Signer } from 'koilib';
 
 describe('WalletService', () => {
   let service: WalletService;
+  let consoleLogSpy: jest.SpyInstance;
 
   beforeEach(() => {
     jest.clearAllMocks();
     service = new WalletService();
+    // Suppress expected console.log output
+    consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
 
     // Default mock implementations
     mockGetAddress.mockReturnValue('1MockAddress123456789012345');
     mockDerivePath.mockReturnValue({
       privateKey: '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
     });
+  });
+
+  afterEach(() => {
+    consoleLogSpy.mockRestore();
   });
 
   describe('generateWallet', () => {

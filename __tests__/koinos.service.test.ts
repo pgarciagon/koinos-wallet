@@ -36,10 +36,17 @@ jest.mock('koilib', () => ({
 
 describe('KoinosService', () => {
   let service: KoinosService;
+  let consoleErrorSpy: jest.SpyInstance;
 
   beforeEach(() => {
     jest.clearAllMocks();
     service = new KoinosService();
+    // Suppress expected console.error in error handling tests
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    consoleErrorSpy.mockRestore();
   });
 
   describe('getRpcUrl', () => {
@@ -87,6 +94,7 @@ describe('KoinosService', () => {
       const balance = await service.getBalance('1ABC');
 
       expect(balance).toBe('0');
+      expect(consoleErrorSpy).toHaveBeenCalledWith('Error getting balance:', expect.any(Error));
     });
 
     it('returns 0 when account has no RC', async () => {
@@ -115,6 +123,7 @@ describe('KoinosService', () => {
 
       expect(mana.current).toBe('0');
       expect(mana.max).toBe('0');
+      expect(consoleErrorSpy).toHaveBeenCalledWith('Error getting mana:', expect.any(Error));
     });
   });
 
@@ -133,6 +142,7 @@ describe('KoinosService', () => {
       const nonce = await service.getNonce('1ABC');
 
       expect(nonce).toBe('0');
+      expect(consoleErrorSpy).toHaveBeenCalledWith('Error getting nonce:', expect.any(Error));
     });
   });
 
