@@ -177,6 +177,7 @@ export default function SendScreen() {
           style={[styles.sendButton, (sending || !walletReady) && styles.sendButtonDisabled]}
           onPress={handleSend}
           disabled={sending || !walletReady}
+          testID="send-button"
         >
           {sending ? (
             <ActivityIndicator color="#fff" />
