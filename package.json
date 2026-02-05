@@ -7,7 +7,8 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "test": "jest"
+    "test": "jest --testPathIgnorePatterns=integration",
+    "test:integration": "jest --testPathPattern=integration --runInBand --forceExit"
   },
   "dependencies": {
     "@ethersproject/shims": "^5.8.0",
