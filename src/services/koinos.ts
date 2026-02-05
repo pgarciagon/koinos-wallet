@@ -8,6 +8,9 @@ const RPC_STORAGE_KEY = 'koinos_rpc_url';
 // Mainnet KOIN contract address (verified)
 const KOIN_CONTRACT = '19GYjDBVXU7keLbYvMLazsGQn3GTWHjHkK';
 
+// Mainnet VHP contract address
+const VHP_CONTRACT = '12Y5vW6gk8GceH53YfRkRre2Rrcsgw7Naq';
+
 // Token ABI (from kcli - proven to work)
 const tokenAbi = {
   methods: {
@@ -115,13 +118,44 @@ export class KoinosService {
 
   async getBalance(address: string): Promise<string> {
     try {
-      const rc = await this.provider.getAccountRc(address);
-      if (rc) {
-        return utils.formatUnits(rc, 8);
+      const koinContract = new Contract({
+        id: KOIN_CONTRACT,
+        abi: tokenAbi,
+        provider: this.provider,
+      });
+
+      const { result } = await koinContract.functions.balance_of({
+        owner: address,
+      });
+
+      if (result?.value) {
+        return utils.formatUnits(result.value, 8);
       }
       return '0';
     } catch (error) {
       console.error('Error getting balance:', error);
+      return '0';
+    }
+  }
+
+  async getVhpBalance(address: string): Promise<string> {
+    try {
+      const vhpContract = new Contract({
+        id: VHP_CONTRACT,
+        abi: tokenAbi,
+        provider: this.provider,
+      });
+
+      const { result } = await vhpContract.functions.balance_of({
+        owner: address,
+      });
+
+      if (result?.value) {
+        return utils.formatUnits(result.value, 8);
+      }
+      return '0';
+    } catch (error) {
+      console.error('Error getting VHP balance:', error);
       return '0';
     }
   }
@@ -217,6 +251,75 @@ export class KoinosService {
     } catch (error: any) {
       console.error('Error sending KOIN:', error);
       throw new Error(error.message || 'Failed to send KOIN');
+    }
+  }
+
+  async sendVhp(
+    signer: Signer,
+    toAddress: string,
+    amount: string
+  ): Promise<{ transactionId: string; success: boolean }> {
+    try {
+      // Connect signer to provider
+      signer.provider = this.provider;
+
+      const fromAddress = signer.getAddress();
+
+      // Debug: verify signer
+      console.log('=== VHP TRANSACTION DEBUG ===');
+      console.log('Signer address:', fromAddress);
+      console.log('Signer has provider:', !!signer.provider);
+
+      // Verify the address has balance
+      const rc = await this.provider.getAccountRc(fromAddress);
+      console.log('Account RC:', rc);
+
+      // Create VHP contract with signer
+      const vhpContract = new Contract({
+        id: VHP_CONTRACT,
+        abi: tokenAbi,
+        provider: this.provider,
+        signer: signer,
+      });
+
+      // Convert amount to satoshis (8 decimals)
+      const amountSatoshis = utils.parseUnits(amount, 8);
+
+      console.log('Sending VHP transaction:', {
+        from: fromAddress,
+        to: toAddress,
+        value: amountSatoshis,
+        rcLimit: "100000000",
+      });
+
+      // Execute transfer with rc_limit (mana limit for the transaction)
+      const { transaction, receipt } = await vhpContract.functions.transfer(
+        {
+          from: fromAddress,
+          to: toAddress,
+          value: amountSatoshis,
+        },
+        {
+          rcLimit: "100000000",
+        }
+      );
+
+      // Wait for transaction to be mined
+      if (transaction) {
+        console.log('VHP Transaction submitted, waiting for confirmation...');
+        const blockInfo = await transaction.wait();
+        console.log('VHP Transaction mined:', blockInfo);
+      }
+
+      const txId = receipt?.id || transaction?.id || 'unknown';
+
+      return {
+        transactionId: txId,
+        success: true,
+      };
+    } catch (error: any) {
+      console.error('Error sending VHP:', error);
+      throw new Error(error.message || 'Failed to send VHP');
     }
   }
 

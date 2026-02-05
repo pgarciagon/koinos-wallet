@@ -23,12 +23,14 @@ jest.mock('../src/services/wallet', () => ({
 
 const mockGetBalance = jest.fn();
 const mockGetMana = jest.fn();
+const mockGetVhpBalance = jest.fn();
 
 jest.mock('../src/services/koinos', () => ({
   __esModule: true,
   default: {
     getBalance: (...args: any[]) => mockGetBalance(...args),
     getMana: (...args: any[]) => mockGetMana(...args),
+    getVhpBalance: (...args: any[]) => mockGetVhpBalance(...args),
   },
 }));
 
@@ -59,6 +61,7 @@ describe('HomeScreen', () => {
     mockLoadWallet.mockResolvedValue({ hasWallet: true, address: '1ABC' });
     mockGetBalance.mockResolvedValue('1.23');
     mockGetMana.mockResolvedValue({ current: '1', max: '2' });
+    mockGetVhpBalance.mockResolvedValue('0');
 
     const { getByText } = render(<HomeScreen />);
 
@@ -71,6 +74,7 @@ describe('HomeScreen', () => {
     mockLoadWallet.mockResolvedValue({ hasWallet: true, address: '1ABC' });
     mockGetBalance.mockResolvedValue('0');
     mockGetMana.mockResolvedValue({ current: '0', max: '0' });
+    mockGetVhpBalance.mockResolvedValue('0');
     mockCopyToClipboard.mockResolvedValue(true);
 
     const { getByText } = render(<HomeScreen />);

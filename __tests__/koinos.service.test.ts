@@ -5,6 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const mockGetHeadInfo = jest.fn();
 const mockGetAccountRc = jest.fn();
 const mockGetNonce = jest.fn();
+const mockBalanceOf = jest.fn();
 
 jest.mock('koilib', () => ({
   Provider: jest.fn().mockImplementation(() => ({
@@ -18,6 +19,7 @@ jest.mock('koilib', () => ({
         transaction: { id: 'tx123', wait: jest.fn().mockResolvedValue({}) },
         receipt: { id: 'tx123' },
       }),
+      balance_of: mockBalanceOf,
     },
   })),
   Signer: jest.fn(),
@@ -80,16 +82,16 @@ describe('KoinosService', () => {
 
   describe('getBalance', () => {
     it('returns formatted balance', async () => {
-      mockGetAccountRc.mockResolvedValue('100000000'); // 1 KOIN in satoshis
+      mockBalanceOf.mockResolvedValue({ result: { value: '100000000' } }); // 1 KOIN in satoshis
 
       const balance = await service.getBalance('1ABC');
 
-      expect(mockGetAccountRc).toHaveBeenCalledWith('1ABC');
+      expect(mockBalanceOf).toHaveBeenCalledWith({ owner: '1ABC' });
       expect(balance).toBe('1.00000000');
     });
 
     it('returns 0 on error', async () => {
-      mockGetAccountRc.mockRejectedValue(new Error('Network error'));
+      mockBalanceOf.mockRejectedValue(new Error('Network error'));
 
       const balance = await service.getBalance('1ABC');
 
@@ -97,8 +99,8 @@ describe('KoinosService', () => {
       expect(consoleErrorSpy).toHaveBeenCalledWith('Error getting balance:', expect.any(Error));
     });
 
-    it('returns 0 when account has no RC', async () => {
-      mockGetAccountRc.mockResolvedValue(null);
+    it('returns 0 when account has no balance', async () => {
+      mockBalanceOf.mockResolvedValue({ result: null });
 
       const balance = await service.getBalance('1ABC');
 

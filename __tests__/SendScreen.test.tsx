@@ -8,8 +8,13 @@ const mockNavigation = {
   replace: jest.fn(),
 };
 
+const mockRoute = {
+  params: { token: 'KOIN' },
+};
+
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => mockNavigation,
+  useRoute: () => mockRoute,
 }));
 
 const mockGetSigner = jest.fn();

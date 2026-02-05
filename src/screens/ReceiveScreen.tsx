@@ -13,7 +13,7 @@ import { copyToClipboard, showAlert } from '../utils/platform';
 export default function ReceiveScreen() {
   const navigation = useNavigation();
   const route = useRoute<any>();
-  const { address } = route.params;
+  const { address, token = 'KOIN' } = route.params;
 
   const handleCopyAddress = async () => {
     const success = await copyToClipboard(address);
@@ -28,13 +28,13 @@ export default function ReceiveScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Text style={styles.backText}>← Back</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>Receive KOIN</Text>
+        <Text style={styles.title}>Deposit {token}</Text>
         <View style={styles.placeholder} />
       </View>
 
       <View style={styles.content}>
         <Text style={styles.instructions}>
-          Scan this QR code or copy the address below to receive KOIN
+          Scan this QR code or copy the address below to deposit {token}
         </Text>
 
         <View style={styles.qrContainer}>

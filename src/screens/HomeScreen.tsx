@@ -17,9 +17,11 @@ export default function HomeScreen() {
   const navigation = useNavigation<any>();
   const [address, setAddress] = useState<string>('');
   const [balance, setBalance] = useState<string>('0');
+  const [vhpBalance, setVhpBalance] = useState<string>('0');
   const [mana, setMana] = useState<{ current: string; max: string }>({ current: '0', max: '0' });
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [selectedToken, setSelectedToken] = useState<'KOIN' | 'VHP'>('KOIN');
 
   const loadData = useCallback(async () => {
     try {
@@ -32,12 +34,14 @@ export default function HomeScreen() {
 
       setAddress(walletInfo.address);
 
-      const [bal, rc] = await Promise.all([
+      const [bal, vhp, rc] = await Promise.all([
         koinosService.getBalance(walletInfo.address),
+        koinosService.getVhpBalance(walletInfo.address),
         koinosService.getMana(walletInfo.address),
       ]);
 
       setBalance(bal);
+      setVhpBalance(vhp);
       setMana(rc);
     } catch (error) {
       console.error('Error loading data:', error);
@@ -107,11 +111,27 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.balanceCard}>
+      <TouchableOpacity
+        style={[styles.balanceCard, selectedToken === 'KOIN' && styles.balanceCardSelected]}
+        onPress={() => setSelectedToken('KOIN')}
+      >
         <Text style={styles.balanceLabel}>KOIN Balance</Text>
-        <Text style={styles.balanceValue}>{parseFloat(balance).toFixed(8)}</Text>
-        <Text style={styles.balanceSymbol}>KOIN</Text>
-      </View>
+        <View style={styles.balanceValueRow}>
+          <Text style={styles.balanceValue}>{parseFloat(balance).toFixed(3)}</Text>
+          <Text style={styles.balanceSymbol}> KOIN</Text>
+        </View>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.vhpCard, selectedToken === 'VHP' && styles.vhpCardSelected]}
+        onPress={() => setSelectedToken('VHP')}
+      >
+        <Text style={styles.vhpLabel}>VHP Balance</Text>
+        <View style={styles.vhpValueRow}>
+          <Text style={styles.vhpBalanceValue}>{parseFloat(vhpBalance).toFixed(3)}</Text>
+          <Text style={styles.vhpSymbol}> VHP</Text>
+        </View>
+      </TouchableOpacity>
 
       <View style={styles.manaCard}>
         <Text style={styles.manaLabel}>Mana (Resource Credits)</Text>
@@ -136,17 +156,17 @@ export default function HomeScreen() {
 
       <View style={styles.actions}>
         <TouchableOpacity
-          style={styles.sendButton}
-          onPress={() => navigation.navigate('Send')}
+          style={[styles.sendButton, selectedToken === 'VHP' && styles.sendButtonVhp]}
+          onPress={() => navigation.navigate('Send', { token: selectedToken })}
         >
-          <Text style={styles.buttonText}>Send KOIN</Text>
+          <Text style={styles.buttonText}>Transfer</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.receiveButton}
-          onPress={copyAddress}
+          style={[styles.depositButton, selectedToken === 'VHP' && styles.depositButtonVhp]}
+          onPress={() => navigation.navigate('Receive', { address, token: selectedToken })}
         >
-          <Text style={styles.buttonTextSecondary}>Receive</Text>
+          <Text style={[styles.buttonTextSecondary, selectedToken === 'VHP' && styles.buttonTextSecondaryVhp]}>Deposit</Text>
         </TouchableOpacity>
       </View>
 
@@ -170,6 +190,7 @@ const styles = StyleSheet.create({
   content: {
     padding: 20,
     paddingTop: 60,
+    flexGrow: 1,
   },
   header: {
     alignItems: 'center',
@@ -214,25 +235,65 @@ const styles = StyleSheet.create({
   },
   balanceCard: {
     backgroundColor: '#0f3460',
-    padding: 25,
-    borderRadius: 16,
+    padding: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  balanceCardSelected: {
+    borderWidth: 2,
+    borderColor: '#4a9eff',
   },
   balanceLabel: {
     color: '#888',
     fontSize: 14,
-    marginBottom: 10,
+  },
+  balanceValueRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
   },
   balanceValue: {
     color: '#fff',
-    fontSize: 36,
+    fontSize: 18,
     fontWeight: 'bold',
   },
   balanceSymbol: {
     color: '#4a9eff',
-    fontSize: 16,
-    marginTop: 5,
+    fontSize: 14,
+  },
+  vhpCard: {
+    backgroundColor: '#1a2d4d',
+    padding: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  vhpCardSelected: {
+    borderWidth: 2,
+    borderColor: '#9b59b6',
+  },
+  vhpLabel: {
+    color: '#888',
+    fontSize: 14,
+  },
+  vhpValueRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+  },
+  vhpBalanceValue: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  vhpSymbol: {
+    color: '#9b59b6',
+    fontSize: 14,
   },
   manaCard: {
     backgroundColor: '#16213e',
@@ -274,7 +335,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
   },
-  receiveButton: {
+  depositButton: {
     flex: 1,
     backgroundColor: 'transparent',
     borderWidth: 2,
@@ -282,6 +343,24 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
+  },
+  depositButtonVhp: {
+    borderColor: '#9b59b6',
+  },
+  sendButtonVhp: {
+    backgroundColor: '#9b59b6',
+  },
+  actionButton: {
+    flex: 1,
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderColor: '#4a9eff',
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  actionButtonVhp: {
+    borderColor: '#9b59b6',
   },
   buttonText: {
     color: '#fff',
@@ -293,8 +372,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  buttonTextSecondaryVhp: {
+    color: '#9b59b6',
+  },
   settingsSection: {
-    marginTop: 10,
+    marginTop: 'auto',
+    paddingTop: 20,
     gap: 12,
   },
   settingsButton: {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Linking } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 
 export default function WelcomeScreen() {
@@ -36,9 +36,27 @@ export default function WelcomeScreen() {
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.footer}>
-        Powered by koilib
-      </Text>
+      <View style={styles.footerContainer}>
+        <Text style={styles.footer}>
+          A{' '}
+          <Text
+            style={styles.footerLink}
+            onPress={() => Linking.openURL('https://koinos.io')}
+          >
+            Koinos
+          </Text>
+          {' '}Foundation App
+        </Text>
+        <Text style={styles.footer}>
+          Powered by{' '}
+          <Text
+            style={styles.footerLink}
+            onPress={() => Linking.openURL('https://github.com/joticajulian/koilib')}
+          >
+            koilib
+          </Text>
+        </Text>
+      </View>
     </View>
   );
 }
@@ -106,10 +124,20 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
   },
+  footerContainer: {
+    alignItems: 'center',
+    marginBottom: 10,
+  },
   footer: {
     color: '#444',
     textAlign: 'center',
     fontSize: 12,
-    marginBottom: 20,
+    marginBottom: 2,
+  },
+  footerLink: {
+    color: '#666',
+    textAlign: 'center',
+    fontSize: 12,
+    marginBottom: 2,
   },
 });

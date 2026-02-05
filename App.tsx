@@ -61,6 +61,7 @@ export default function App() {
         <Stack.Screen name="ImportWallet" component={ImportWalletScreen} />
         <Stack.Screen name="Home" component={HomeScreen} />
         <Stack.Screen name="Send" component={SendScreen} />
+        <Stack.Screen name="Receive" component={ReceiveScreen} />
         <Stack.Screen name="Settings" component={SettingsScreen} />
       </Stack.Navigator>
     </NavigationContainer>
