@@ -24,6 +24,60 @@ npm test -- --coverage
 
 ## Test Files
 
+### koinos.service.test.ts
+
+Tests the KoinosService that handles blockchain interactions.
+
+| Test | Description |
+|------|-------------|
+| `getRpcUrl - returns default RPC URL when nothing is stored` | Verifies default endpoint is used |
+| `getRpcUrl - returns stored RPC URL` | Tests loading custom RPC from storage |
+| `setRpcUrl - stores RPC URL and updates provider` | Tests saving RPC URL |
+| `getBalance - returns formatted balance` | Tests balance fetching and formatting |
+| `getBalance - returns 0 on error` | Handles network errors gracefully |
+| `getBalance - returns 0 when account has no RC` | Handles null balance |
+| `getMana - returns current and max mana` | Tests mana retrieval |
+| `getMana - returns zeros on error` | Handles mana fetch errors |
+| `getNonce - returns nonce as string` | Tests nonce retrieval |
+| `getNonce - returns 0 on error` | Handles nonce fetch errors |
+| `isValidAddress - valid/invalid cases` | Tests address validation logic |
+| `getChainInfo - returns chain head info` | Tests chain info retrieval |
+
+**Mocked Dependencies:**
+- `koilib.Provider` - Mock blockchain provider
+- `AsyncStorage` - Mock persistent storage
+
+---
+
+### wallet.service.test.ts
+
+Tests the WalletService that manages wallet creation, import, and storage.
+
+| Test | Description |
+|------|-------------|
+| `generateWallet - generates mnemonic and returns address` | Tests new wallet creation |
+| `importFromMnemonic - imports wallet from valid mnemonic` | Tests mnemonic import |
+| `importFromMnemonic - throws error for invalid mnemonic` | Validates mnemonic format |
+| `importFromMnemonic - uses custom account index` | Tests custom derivation paths |
+| `importFromWIF - imports wallet from valid WIF` | Tests WIF private key import |
+| `importFromWIF - throws error for invalid WIF` | Validates WIF format |
+| `loadWallet - returns hasWallet false when no wallet stored` | Tests empty state |
+| `loadWallet - loads mnemonic wallet` | Tests loading mnemonic-based wallet |
+| `loadWallet - loads WIF wallet` | Tests loading WIF-based wallet |
+| `deleteWallet - deletes wallet from storage` | Tests wallet deletion |
+| `hasWallet - returns true/false` | Tests wallet existence check |
+| `getSeedPhrase - returns mnemonic/null` | Tests seed phrase retrieval |
+| `hasSeedPhrase - returns true/false` | Tests seed phrase availability |
+| `getSigner/getAddress - returns null before wallet is loaded` | Tests initial state |
+
+**Mocked Dependencies:**
+- `expo-secure-store` - Mock secure storage
+- `bip39` - Mock mnemonic generation/validation
+- `ethers.utils.HDNode` - Mock HD wallet derivation
+- `koilib.Signer` - Mock transaction signer
+
+---
+
 ### CreateWalletScreen.test.tsx
 
 Tests the wallet creation flow where users generate a new mnemonic seed phrase.
