@@ -140,6 +140,111 @@ To create a self-contained build with the JS bundle embedded (no Metro needed):
 npx expo run:ios --device --configuration Release
 ```
 
+## Build Architecture
+
+Understanding how the app is compiled helps when debugging build issues or optimizing for production.
+
+### Two-Layer Compilation
+
+The app consists of two independently compiled layers:
+
+| Layer | Language | Compiled By | When |
+|-------|----------|-------------|------|
+| **Native shell** | Objective-C, C++ | Xcode (`xcodebuild`) | `npx expo run:ios` |
+| **Application logic** | TypeScript → JavaScript | Metro Bundler / Hermes | Every save (dev) or at build time (prod) |
+
+The **native shell** includes the Hermes JavaScript engine, React Native bridge, and all native modules (SecureStore, AsyncStorage, Camera, etc.). This is compiled once and rarely changes.
+
+The **application logic** is all your TypeScript code (screens, services, navigation). In development, Metro serves it over the network for instant hot-reload. In production, it's pre-compiled to Hermes bytecode and embedded in the binary.
+
+### Development vs Production Builds
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                   DEVELOPMENT BUILD                      │
+│                                                          │
+│  iPhone                          Mac                     │
+│  ┌──────────────┐               ┌──────────────┐        │
+│  │ Native Shell │◄──network────►│ Metro Bundler │        │
+│  │ (compiled)   │  JS bundle    │ (port 8081)   │        │
+│  └──────────────┘               └──────────────┘        │
+│  npx expo run:ios --device      npx expo start           │
+│                                  --dev-client             │
+└─────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────┐
+│                   PRODUCTION BUILD                       │
+│                                                          │
+│  iPhone                                                  │
+│  ┌──────────────────────────────┐                        │
+│  │ Native Shell + Hermes        │  Fully standalone.     │
+│  │ Bytecode (JS embedded)       │  No Mac needed.        │
+│  └──────────────────────────────┘                        │
+│  npx expo run:ios --device --configuration Release       │
+└─────────────────────────────────────────────────────────┘
+```
+
+### What `npx expo run:ios --device` Does (Step by Step)
+
+1. **Xcode build** (`xcodebuild`):
+   - Compiles Hermes engine (C++)
+   - Compiles React Native bridge (Obj-C/C++)
+   - Compiles all CocoaPods (native modules)
+   - Links everything into `KoinosWallet.app`
+
+2. **Code signing**:
+   - Auto-selects your Apple Developer certificate
+   - Signs the `.app` bundle
+
+3. **Installation** (`xcrun devicectl`):
+   - Transfers `.app` to your connected iPhone
+   - Registers the app with iOS
+
+4. **Launch**:
+   - Opens the app on the device
+   - In Debug: connects to Metro for JS bundle
+   - In Release: loads embedded Hermes bytecode
+
+### Adding `--configuration Release`
+
+```bash
+npx expo run:ios --device --configuration Release
+```
+
+This additionally:
+- **Bundles** all TypeScript into a single optimized JavaScript file
+- **Compiles** the JS to **Hermes bytecode** (`.hbc`) for faster startup
+- **Minifies** and tree-shakes unused code
+- **Strips** dev tools (shake menu, inspector, hot reload)
+- **Embeds** everything inside the `.app` — the app runs fully offline
+
+### Build Times
+
+| Build Type | First Build | Incremental |
+|-----------|-------------|-------------|
+| Debug | 3–5 minutes | 30–60 seconds |
+| Release | 5–8 minutes | 1–2 minutes |
+
+### Key Paths
+
+| Path | Description |
+|------|-------------|
+| `ios/` | Generated native project (in `.gitignore`, regenerate with `npx expo prebuild`) |
+| `~/Library/Developer/Xcode/DerivedData/KoinosWallet-*/` | Xcode build cache (safe to delete) |
+| `ios/KoinosWallet.xcworkspace` | Open this in Xcode for manual configuration |
+
+### Regenerating the Native Project
+
+If you change `app.json`, add/remove native dependencies, or the build is broken:
+
+```bash
+npx expo prebuild --platform ios --clean
+```
+
+This deletes `ios/` and regenerates it from `app.json`. All CocoaPods are re-installed automatically.
+
+---
+
 ### Option 3: Ad-Hoc Distribution (Share with Testers)
 
 1. **Register test devices** in Apple Developer portal (UDID required)
