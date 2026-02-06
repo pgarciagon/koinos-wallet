@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -53,6 +53,12 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       loadData();
+
+      const interval = setInterval(() => {
+        loadData();
+      }, 5000);
+
+      return () => clearInterval(interval);
     }, [loadData])
   );
 
