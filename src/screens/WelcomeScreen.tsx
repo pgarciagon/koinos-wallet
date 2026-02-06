@@ -8,12 +8,10 @@ export default function WelcomeScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <View style={styles.logoWrapper}>
-          <Image
-            source={require('../../assets/koinos-logo-white.png')}
-            style={styles.logo}
-          />
-        </View>
+        <Image
+          source={require('../../assets/konios-logomark-set/koinos-logomark-white@large.png')}
+          style={styles.logo}
+        />
         <Text style={styles.title}>Koinos Wallet</Text>
         <Text style={styles.subtitle}>
           A simple wallet for the Koinos blockchain
@@ -72,19 +70,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 100,
   },
-  logoWrapper: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: '#16213e',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
-  },
   logo: {
-    width: 72,
-    height: 72,
+    width: 120,
+    height: 133,
     resizeMode: 'contain',
+    marginBottom: 20,
   },
   title: {
     fontSize: 32,
