@@ -55,48 +55,90 @@ To run the app directly on your iPhone without the App Store:
 3. Scan the QR code with your iPhone camera
 4. The app opens in Expo Go
 
-### Option 2: Development Build (Full Native Features)
+### Option 2: Native Build on Physical iPhone (Recommended)
 
-This creates a standalone app on your iPhone with full native module support.
+This compiles the app natively with Xcode and installs it directly on your iPhone — no Expo Go required. You get full native module support and a standalone app icon on your home screen.
 
 #### Prerequisites
-1. **Apple Developer Account** - Free account works for personal testing
-2. **Xcode installed** with command line tools
-3. **iPhone connected** via USB cable
-4. **Trust your Mac** on the iPhone when prompted
+1. **Apple Developer Account** — a free account works for personal testing (apps expire after 7 days)
+2. **Xcode** installed with Command Line Tools (`xcode-select --install`)
+3. **CocoaPods** installed (`sudo gem install cocoapods` or `brew install cocoapods`)
+4. **iPhone connected via USB** and trusted ("Trust This Computer?" prompt)
 
-#### Steps
+#### Step 1: Generate the native iOS project
 
-1. **Install EAS CLI** (if not already):
+This creates the `ios/` directory with the Xcode project and installs CocoaPods dependencies:
+
 ```bash
-npm install -g eas-cli
-eas login
+npx expo prebuild --platform ios --clean
 ```
 
-2. **Configure the project** (first time only):
-```bash
-eas build:configure
-```
+> **Note:** Run with `--clean` to regenerate from scratch. This is safe — the `ios/` folder is derived from your Expo config and can always be regenerated.
 
-3. **Create a development build for iOS device**:
-```bash
-eas build --profile development --platform ios
-```
+#### Step 2: Build and install on your iPhone
 
-4. **Or build locally** (faster, no cloud):
 ```bash
 npx expo run:ios --device
 ```
-This will:
-- Prompt you to select your connected iPhone
-- Build the native iOS app
-- Install it directly on your device
 
-#### First-time Device Setup
-If using a free Apple Developer account:
-1. Open **Settings > General > VPN & Device Management** on your iPhone
-2. Find your developer certificate and tap **Trust**
-3. Relaunch the app
+This will:
+- Detect your connected iPhone
+- Auto-sign the app with your Apple Developer certificate
+- Compile all native code (Hermes engine, React Native, native modules)
+- Install the `.app` bundle on your device via `devicectl`
+- Launch the app
+
+**First build takes 3–5 minutes.** Subsequent builds are incremental and much faster.
+
+> **Tip:** If the device name contains special characters (apostrophes, parentheses), pass the device ID directly:
+> ```bash
+> # List connected devices
+> xcrun devicectl list devices
+> # Build with device ID
+> npx expo run:ios --device <DEVICE_ID>
+> ```
+
+#### Step 3: Trust the developer profile (first time only)
+
+With a free Apple Developer account, iOS requires you to manually trust the signing certificate:
+
+1. On your iPhone, go to **Settings → General → VPN & Device Management**
+2. Under "Developer App", find your Apple ID / team name
+3. Tap **Trust**
+4. Open the app from your home screen
+
+#### Step 4: Connect to the Metro dev server
+
+After the app launches, it needs to connect to Metro for the JavaScript bundle:
+
+1. Start Metro on your Mac:
+   ```bash
+   npx expo start --dev-client
+   ```
+2. The app should auto-discover the server on your local network
+3. If it shows "No development servers found", enter the URL manually:
+   ```
+   http://<YOUR_MAC_IP>:8081
+   ```
+   Find your Mac's IP with: `ipconfig getifaddr en0`
+
+#### Troubleshooting Native Builds
+
+| Problem | Solution |
+|---------|----------|
+| `Sandbox: bash deny file-write-create` | In `ios/KoinosWallet.xcodeproj/project.pbxproj`, set `ENABLE_USER_SCRIPT_SANDBOXING = NO` (2 occurrences), then clean DerivedData: `rm -rf ~/Library/Developer/Xcode/DerivedData/KoinosWallet-*` |
+| `No space left on device` | Free disk space: `rm -rf ~/Library/Developer/Xcode/DerivedData/*` and `rm -rf ~/Library/Developer/CoreSimulator/Caches/*` |
+| Code signing errors | Open `ios/KoinosWallet.xcworkspace` in Xcode → Select KoinosWallet target → Signing & Capabilities → Select your team |
+| Device name regex error | Use the device ID instead of letting Expo auto-detect (see Step 2 tip above) |
+| `profile has not been explicitly trusted` | Follow Step 3 to trust the developer profile on your iPhone |
+
+#### Production Build (No Dev Server)
+
+To create a self-contained build with the JS bundle embedded (no Metro needed):
+
+```bash
+npx expo run:ios --device --configuration Release
+```
 
 ### Option 3: Ad-Hoc Distribution (Share with Testers)
 
