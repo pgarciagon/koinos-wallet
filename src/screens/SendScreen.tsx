@@ -76,7 +76,8 @@ export default function SendScreen() {
       return false;
     }
 
-    const amountNum = parseFloat(amount);
+    const normalizedAmount = amount.replace(',', '.');
+    const amountNum = parseFloat(normalizedAmount);
     if (isNaN(amountNum) || amountNum <= 0) {
       setError('Please enter a valid amount');
       return false;
@@ -96,9 +97,10 @@ export default function SendScreen() {
     setError(null);
 
     try {
+      const normalizedAmount = amount.replace(',', '.');
       const result = token === 'VHP' 
-        ? await koinosService.sendVhp(signer, toAddress.trim(), amount)
-        : await koinosService.sendKoin(signer, toAddress.trim(), amount);
+        ? await koinosService.sendVhp(signer, toAddress.trim(), normalizedAmount)
+        : await koinosService.sendKoin(signer, toAddress.trim(), normalizedAmount);
 
       showAlert(
         'Success',
@@ -124,7 +126,7 @@ export default function SendScreen() {
 
     showAlert(
       'Confirm Transaction',
-      `Send ${amount} ${token} to ${toAddress.substring(0, 16)}...?`,
+      `Send ${amount.replace(',', '.')} ${token} to ${toAddress.substring(0, 16)}...?`,
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Send', onPress: executeSend },

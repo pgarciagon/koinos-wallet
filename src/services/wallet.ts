@@ -101,6 +101,11 @@ export class WalletService {
 
   // Load wallet from secure storage
   async loadWallet(): Promise<WalletInfo> {
+    // Return cached wallet if already loaded
+    if (this.signer && this.address) {
+      return { address: this.address, hasWallet: true };
+    }
+
     try {
       const stored = await storage.getItem(WALLET_KEY);
       const address = await storage.getItem(WALLET_ADDRESS_KEY);
