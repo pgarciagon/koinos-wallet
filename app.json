@@ -8,7 +8,7 @@
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/koinos-logo-white.png",
       "resizeMode": "contain",
       "backgroundColor": "#1a1a2e"
     },

@@ -188,6 +188,14 @@ export class WalletService {
     return stored;
   }
 
+  // Get the private key in WIF format
+  getPrivateKey(): string | null {
+    if (!this.signer) {
+      return null;
+    }
+    return this.signer.getPrivateKey('wif');
+  }
+
   // Check if the wallet has a seed phrase (vs WIF import)
   async hasSeedPhrase(): Promise<boolean> {
     const stored = await storage.getItem(WALLET_KEY);

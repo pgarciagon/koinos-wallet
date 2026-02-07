@@ -7,11 +7,13 @@ import {
   TextInput,
   ScrollView,
   Modal,
+  Platform,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import koinosService from '../services/koinos';
 import walletService from '../services/wallet';
 import { showAlert, copyToClipboard } from '../utils/platform';
+import { APP_VERSION, CHANGELOG } from '../data/changelog';
 
 export default function SettingsScreen() {
   const navigation = useNavigation<any>();
@@ -19,6 +21,9 @@ export default function SettingsScreen() {
   const [saving, setSaving] = useState(false);
   const [showSeedPhrase, setShowSeedPhrase] = useState(false);
   const [seedPhrase, setSeedPhrase] = useState<string | null>(null);
+  const [showChangelog, setShowChangelog] = useState(false);
+  const [showPrivateKey, setShowPrivateKey] = useState(false);
+  const [privateKey, setPrivateKey] = useState<string | null>(null);
 
   useEffect(() => {
     const loadRpc = async () => {
@@ -79,6 +84,37 @@ export default function SettingsScreen() {
     }
   };
 
+  const handleViewPrivateKey = () => {
+    showAlert(
+      'Security Warning',
+      'Your private key gives full access to your wallet. Never share it with anyone!\n\nMake sure no one is watching your screen.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Show Private Key',
+          onPress: () => {
+            const key = walletService.getPrivateKey();
+            if (key) {
+              setPrivateKey(key);
+              setShowPrivateKey(true);
+            } else {
+              showAlert('Not Available', 'Wallet is not loaded.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleCopyPrivateKey = async () => {
+    if (privateKey) {
+      const success = await copyToClipboard(privateKey);
+      if (success) {
+        showAlert('Copied', 'Private key copied to clipboard. Make sure to clear your clipboard after use!');
+      }
+    }
+  };
+
   const handleDeleteWallet = () => {
     showAlert(
       'Delete Wallet?',
@@ -98,7 +134,8 @@ export default function SettingsScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+  <View style={styles.container}>
+    <ScrollView contentContainerStyle={styles.content}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Text style={styles.backText}>← Back</Text>
@@ -135,10 +172,52 @@ export default function SettingsScreen() {
         <TouchableOpacity style={styles.secondaryButton} onPress={handleViewSeedPhrase}>
           <Text style={styles.secondaryButtonText}>View Seed Phrase</Text>
         </TouchableOpacity>
+        <TouchableOpacity style={styles.secondaryButton} onPress={handleViewPrivateKey}>
+          <Text style={styles.secondaryButtonText}>View Private Key</Text>
+        </TouchableOpacity>
         <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteWallet}>
           <Text style={styles.deleteButtonText}>Delete Wallet</Text>
         </TouchableOpacity>
       </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>About</Text>
+        <TouchableOpacity style={styles.secondaryButton} onPress={() => setShowChangelog(true)}>
+          <Text style={styles.secondaryButtonText}>Changelog</Text>
+        </TouchableOpacity>
+      </View>
+
+      <Modal
+        visible={showChangelog}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShowChangelog(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Changelog</Text>
+            <ScrollView style={styles.changelogScroll}>
+              {CHANGELOG.map((entry) => (
+                <View key={entry.version} style={styles.changelogEntry}>
+                  <Text style={styles.changelogVersion}>v{entry.version}</Text>
+                  <Text style={styles.changelogDate}>{entry.date}</Text>
+                  {entry.changes.map((change, i) => (
+                    <Text key={i} style={styles.changelogItem}>
+                      {'\u2022'} {change}
+                    </Text>
+                  ))}
+                </View>
+              ))}
+            </ScrollView>
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => setShowChangelog(false)}
+            >
+              <Text style={styles.closeButtonText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       <Modal
         visible={showSeedPhrase}
@@ -184,7 +263,50 @@ export default function SettingsScreen() {
           </View>
         </View>
       </Modal>
+
+      <Modal
+        visible={showPrivateKey}
+        animationType="slide"
+        transparent
+        onRequestClose={() => {
+          setPrivateKey(null);
+          setShowPrivateKey(false);
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Your Private Key (WIF)</Text>
+
+            <View style={styles.warningBox}>
+              <Text style={styles.warningText}>
+                Never share this key with anyone! Anyone with this key can access your funds.
+              </Text>
+            </View>
+
+            <View style={styles.privateKeyContainer}>
+              <Text style={styles.privateKeyText} selectable>{privateKey}</Text>
+            </View>
+
+            <TouchableOpacity style={styles.copyButton} onPress={handleCopyPrivateKey}>
+              <Text style={styles.copyButtonText}>Copy to Clipboard</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => {
+                setPrivateKey(null);
+                setShowPrivateKey(false);
+              }}
+            >
+              <Text style={styles.closeButtonText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
     </ScrollView>
+    <Text style={styles.versionText}>Koinos Wallet v{APP_VERSION}</Text>
+  </View>
   );
 }
 
@@ -363,5 +485,47 @@ const styles = StyleSheet.create({
     color: '#888',
     fontSize: 20,
     fontWeight: '600',
+  },
+  versionText: {
+    color: '#666',
+    fontSize: 14,
+    textAlign: 'center',
+    paddingVertical: 12,
+    backgroundColor: '#1a1a2e',
+  },
+  changelogScroll: {
+    maxHeight: 400,
+    marginBottom: 15,
+  },
+  changelogEntry: {
+    marginBottom: 20,
+  },
+  changelogVersion: {
+    color: '#4a9eff',
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  changelogDate: {
+    color: '#888',
+    fontSize: 14,
+    marginBottom: 8,
+  },
+  changelogItem: {
+    color: '#ccc',
+    fontSize: 16,
+    lineHeight: 24,
+    paddingLeft: 8,
+  },
+  privateKeyContainer: {
+    backgroundColor: '#16213e',
+    padding: 14,
+    borderRadius: 10,
+    marginBottom: 20,
+  },
+  privateKeyText: {
+    color: '#fff',
+    fontSize: 14,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    lineHeight: 22,
   },
 });

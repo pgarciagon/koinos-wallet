@@ -1,21 +1,19 @@
 # Koinos Wallet (Expo)
 
-A simple Koinos blockchain wallet built with Expo and React Native. It supports creating/importing wallets, viewing balance/mana, sending KOIN, and receiving via address copy (QR receive is planned).
+A mobile wallet for the Koinos blockchain built with Expo and React Native. Create or import wallets, manage KOIN and VHP tokens, send transactions with free mana support, and receive via QR code — all from your phone.
 
-## Main Screen Overview
-The main screen presents a quick summary of your wallet status and key actions:
+## Features
 
-- **Header and branding**: Displays the Koinos Wallet title with the app logo.
-- **Address card**: Shows your wallet address in a shortened format with a “Tap to copy” affordance.
-- **Balance card**: Prominently displays your KOIN balance with token label.
-- **Mana (Resource Credits)**: Visual progress bar and numeric display for current/max mana.
-- **Primary actions**: Large buttons for **Send KOIN** and **Receive**.
-- **Security actions**: Quick access to **View Seed Phrase** and **Delete Wallet**.
+- **Wallet management** — Create a new wallet (BIP-39 mnemonic) or import an existing one via seed phrase or private key (WIF)
+- **Multi-token support** — View balances and send/receive both KOIN and VHP tokens
+- **Mana system** — Real-time mana meter with animated regeneration indicator and estimated remaining transfers
+- **Free mana** — Automatic detection and use of the Koinos free mana sharer for gas-free transactions
+- **QR codes** — Scan recipient addresses with the camera and generate QR codes for receiving
+- **MAX send** — One-tap toggle to send your full available balance, with mana-aware calculation
+- **Receive screen** — QR code display and tap-to-copy address for easy deposits
+- **Settings** — Configurable RPC endpoint, seed phrase backup, and changelog
+- **Secure storage** — Private keys stored in the device Keychain via Expo SecureStore
 
-### Screenshot
-<p align="center">
-	<img src="assets/main_screen.png" alt="Koinos Wallet main screen" />
-</p>
 
 ## Prerequisites
 - Node.js 18+ (LTS recommended)
