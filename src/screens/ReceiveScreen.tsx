@@ -79,7 +79,7 @@ const styles = StyleSheet.create({
   },
   backText: {
     color: '#4a9eff',
-    fontSize: 16,
+    fontSize: 20,
   },
   title: {
     fontSize: 20,
@@ -97,10 +97,10 @@ const styles = StyleSheet.create({
   },
   instructions: {
     color: '#888',
-    fontSize: 16,
+    fontSize: 18,
     textAlign: 'center',
     marginBottom: 40,
-    lineHeight: 24,
+    lineHeight: 26,
   },
   qrContainer: {
     marginBottom: 40,
@@ -119,16 +119,16 @@ const styles = StyleSheet.create({
   },
   addressLabel: {
     color: '#888',
-    fontSize: 12,
+    fontSize: 20,
     marginBottom: 10,
     textAlign: 'center',
   },
   address: {
     color: '#fff',
-    fontSize: 14,
+    fontSize: 20,
     fontFamily: 'monospace',
     textAlign: 'center',
-    lineHeight: 22,
+    lineHeight: 28,
   },
   copyButton: {
     backgroundColor: '#4a9eff',
@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
   },
   copyButtonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 20,
     fontWeight: '600',
     textAlign: 'center',
   },

@@ -45,15 +45,6 @@ export default function WelcomeScreen() {
           </Text>
           {' '}Foundation App
         </Text>
-        <Text style={styles.footer}>
-          Powered by{' '}
-          <Text
-            style={styles.footerLink}
-            onPress={() => Linking.openURL('https://github.com/joticajulian/koilib')}
-          >
-            koilib
-          </Text>
-        </Text>
       </View>
     </View>
   );
@@ -83,7 +74,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 18,
     color: '#888',
     textAlign: 'center',
   },
@@ -98,7 +89,7 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     color: '#fff',
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '600',
   },
   secondaryButton: {
@@ -111,7 +102,7 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: {
     color: '#4a9eff',
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '600',
   },
   footerContainer: {
@@ -121,13 +112,13 @@ const styles = StyleSheet.create({
   footer: {
     color: '#444',
     textAlign: 'center',
-    fontSize: 12,
+    fontSize: 18,
     marginBottom: 2,
   },
   footerLink: {
     color: '#666',
     textAlign: 'center',
-    fontSize: 12,
+    fontSize: 18,
     marginBottom: 2,
   },
 });

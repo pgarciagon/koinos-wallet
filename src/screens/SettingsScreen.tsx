@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
   },
   backText: {
     color: '#4a9eff',
-    fontSize: 16,
+    fontSize: 20,
   },
   title: {
     fontSize: 22,
@@ -226,22 +226,22 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 20,
     fontWeight: '600',
     marginBottom: 6,
   },
   sectionDescription: {
     color: '#888',
-    fontSize: 13,
+    fontSize: 18,
     marginBottom: 12,
-    lineHeight: 18,
+    lineHeight: 24,
   },
   input: {
     backgroundColor: '#0f3460',
     borderRadius: 10,
     padding: 14,
     color: '#fff',
-    fontSize: 14,
+    fontSize: 20,
     borderWidth: 1,
     borderColor: '#0f3460',
     marginBottom: 12,
@@ -257,7 +257,7 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     color: '#fff',
-    fontSize: 15,
+    fontSize: 20,
     fontWeight: '600',
   },
   secondaryButton: {
@@ -269,7 +269,7 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: {
     color: '#4a9eff',
-    fontSize: 15,
+    fontSize: 20,
     fontWeight: '600',
   },
   deleteButton: {
@@ -281,7 +281,7 @@ const styles = StyleSheet.create({
   },
   deleteButtonText: {
     color: '#ff6b6b',
-    fontSize: 15,
+    fontSize: 20,
     fontWeight: '600',
   },
   modalOverlay: {
@@ -313,8 +313,8 @@ const styles = StyleSheet.create({
   },
   warningText: {
     color: '#ff9999',
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 18,
+    lineHeight: 24,
   },
   seedPhraseContainer: {
     flexDirection: 'row',
@@ -333,13 +333,13 @@ const styles = StyleSheet.create({
   },
   wordNumber: {
     color: '#4a9eff',
-    fontSize: 11,
+    fontSize: 16,
     marginRight: 6,
     fontWeight: '600',
   },
   word: {
     color: '#fff',
-    fontSize: 12,
+    fontSize: 16,
   },
   copyButton: {
     backgroundColor: '#4a9eff',
@@ -350,7 +350,7 @@ const styles = StyleSheet.create({
   },
   copyButtonText: {
     color: '#fff',
-    fontSize: 15,
+    fontSize: 20,
     fontWeight: '600',
   },
   closeButton: {
@@ -361,7 +361,7 @@ const styles = StyleSheet.create({
   },
   closeButtonText: {
     color: '#888',
-    fontSize: 15,
+    fontSize: 20,
     fontWeight: '600',
   },
 });

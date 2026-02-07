@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,8 @@ import {
   Platform,
   ScrollView,
   Modal,
+  Animated,
+  Easing,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
@@ -36,8 +38,44 @@ export default function SendScreen() {
   const [fromAddress, setFromAddress] = useState<string>('');
   const [showScanner, setShowScanner] = useState(false);
   const [scanned, setScanned] = useState(false);
+  const [manaEstimate, setManaEstimate] = useState<{ koin: string; percent: string } | null>(null);
+  const [availableBalance, setAvailableBalance] = useState<string>('0');
+  const [useFreeMana, setUseFreeMana] = useState(false);
+  const [freeManaAvailable, setFreeManaAvailable] = useState(false);
+  const [freeManaStatus, setFreeManaStatus] = useState<string>('checking...');
+  const [userMana, setUserMana] = useState<{ current: string; max: string }>({ current: '0', max: '0' });
+  const [maxLevel, setMaxLevel] = useState<0 | 1 | 2>(0);
+  const maxSendableAmount = useRef('');
 
   const [permission, requestPermission] = useCameraPermissions();
+  const pulseAnim = useRef(new Animated.Value(0.5)).current;
+
+  const manaPercent = parseFloat(userMana.max) > 0
+    ? parseFloat(userMana.current) / parseFloat(userMana.max)
+    : 0;
+
+  useEffect(() => {
+    if (manaPercent < 1) {
+      pulseAnim.setValue(0);
+      const pulse = Animated.loop(
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 6000,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        })
+      );
+      pulse.start();
+      return () => pulse.stop();
+    } else {
+      pulseAnim.setValue(0);
+    }
+  }, [manaPercent < 1]);
+
+  const glowOpacity = pulseAnim.interpolate({
+    inputRange: [0, 0.25, 0.5, 0.75, 1],
+    outputRange: [0.5, 0.8, 0.5, 0.8, 0.5],
+  });
 
   // Ensure wallet is loaded when screen mounts
   React.useEffect(() => {
@@ -52,6 +90,54 @@ export default function SendScreen() {
             setFromAddress(addr);
             console.log('SendScreen - Signer address:', addr);
             console.log('SendScreen - Stored address:', info.address);
+
+            // Fetch available balance
+            try {
+              const bal = token === 'VHP'
+                ? await koinosService.getVhpBalance(addr)
+                : await koinosService.getBalance(addr);
+              console.log('=== WALLET LOAD: BALANCE ===');
+              console.log('Token:', token, 'Balance fetched:', bal);
+              setAvailableBalance(bal);
+            } catch (e) {
+              console.error('Error fetching balance:', e);
+            }
+
+            // Check free mana sharer availability
+            try {
+              const freeStatus = await koinosService.getFreeManaAvailable();
+              console.log('Free mana check result:', JSON.stringify(freeStatus));
+              setFreeManaAvailable(freeStatus.available);
+              setFreeManaStatus(freeStatus.available 
+                ? `available (${parseFloat(freeStatus.mana).toFixed(2)} mana)` 
+                : `unavailable (${freeStatus.mana} mana)`);
+            } catch (e: any) {
+              console.error('Error checking free mana:', e);
+              setFreeManaStatus(`error: ${e.message || 'unknown'}`);
+            }
+
+            // Estimate mana cost
+            try {
+              const [estimate, mana] = await Promise.all([
+                koinosService.estimateTransferCost(),
+                koinosService.getMana(addr),
+              ]);
+              console.log('=== WALLET LOAD: MANA ===');
+              console.log('Mana object:', JSON.stringify(mana));
+              console.log('Estimate object:', JSON.stringify(estimate));
+              setUserMana(mana);
+              const currentMana = parseFloat(mana.current);
+              const estimateKoin = parseFloat(estimate.koinEstimate);
+              const percent = currentMana > 0
+                ? (estimateKoin / currentMana * 100).toFixed(1)
+                : '?';
+              setManaEstimate({
+                koin: estimateKoin.toFixed(4),
+                percent,
+              });
+            } catch (e) {
+              console.error('Error estimating mana:', e);
+            }
           }
         } else {
           setError('No wallet found. Please create or import a wallet first.');
@@ -62,6 +148,59 @@ export default function SendScreen() {
     };
     loadWallet();
   }, []);
+
+  // Auto-detect if free mana is needed when amount changes
+  // Free mana works for both KOIN and VHP transfers (payer = free mana sharer contract)
+  React.useEffect(() => {
+    if (!fromAddress || !manaEstimate) return;
+    const normalizedAmount = amount.replace(',', '.');
+    const sendAmt = parseFloat(normalizedAmount) || 0;
+    const manaCost = parseFloat(manaEstimate.koin);
+    const currentMana = parseFloat(userMana.current);
+
+    console.log('=== AUTO-DETECT FREE MANA ===');
+    console.log('token:', token, 'sendAmt:', sendAmt, 'manaCost:', manaCost, 'currentMana:', currentMana);
+    console.log('availableBalance:', availableBalance, 'freeManaAvailable:', freeManaAvailable);
+
+    if (token === 'KOIN') {
+      // Self-pay RC cost = transferAmount + txFee. Enable free mana when that exceeds available mana.
+      const needs = (sendAmt + manaCost * 1.5) > currentMana && sendAmt > 0;
+      console.log('KOIN: sendAmt + txFee:', sendAmt + manaCost * 1.5, 'currentMana:', currentMana, 'needs:', needs);
+      console.log('Setting useFreeMana to:', needs && freeManaAvailable);
+      setUseFreeMana(needs && freeManaAvailable);
+    } else {
+      const needs = currentMana < manaCost * 3 && sendAmt > 0;
+      console.log('VHP: needs:', needs, 'Setting useFreeMana to:', needs && freeManaAvailable);
+      setUseFreeMana(needs && freeManaAvailable);
+    }
+  }, [amount, manaEstimate, userMana, availableBalance, token, freeManaAvailable, fromAddress]);
+
+  // Calculate how long until mana recharges to a target amount
+  const FIVE_DAYS_MS = 5 * 24 * 60 * 60 * 1000; // 432,000,000 ms
+  const getManaRechargeTime = (targetAmount: number): string | null => {
+    const currentMana = parseFloat(userMana.current);
+    const maxMana = parseFloat(userMana.max); // = KOIN balance
+    if (targetAmount <= currentMana) return null; // already have enough
+    if (targetAmount > maxMana) return null; // will never reach it
+    // Mana regens linearly: 0 → maxMana over 5 days
+    // Rate = maxMana / FIVE_DAYS_MS per ms
+    const deficit = targetAmount - currentMana;
+    const regenRate = maxMana / FIVE_DAYS_MS; // mana per ms
+    if (regenRate <= 0) return null;
+    const msNeeded = deficit / regenRate;
+    const hours = Math.floor(msNeeded / (1000 * 60 * 60));
+    const days = Math.floor(hours / 24);
+    const remainingHours = hours % 24;
+    if (days > 0) {
+      return `~${days}d ${remainingHours}h`;
+    } else if (hours > 0) {
+      const mins = Math.floor((msNeeded % (1000 * 60 * 60)) / (1000 * 60));
+      return `~${hours}h ${mins}m`;
+    } else {
+      const mins = Math.ceil(msNeeded / (1000 * 60));
+      return `~${mins}m`;
+    }
+  };
 
   const validateInputs = (): boolean => {
     setError(null);
@@ -83,6 +222,34 @@ export default function SendScreen() {
       return false;
     }
 
+    // KOIN contract enforces: from.mana >= transfer_amount (regardless of payer).
+    // The user can only send up to their current mana in KOIN.
+    if (token === 'KOIN') {
+      const currentMana = parseFloat(userMana.current);
+      console.log('=== VALIDATION DEBUG ===');
+      console.log('Amount to send:', amountNum);
+      console.log('Current mana:', currentMana);
+      console.log('Available balance:', availableBalance);
+      console.log('Use free mana:', useFreeMana);
+      if (amountNum > currentMana) {
+        const rechargeTime = getManaRechargeTime(amountNum);
+        const timeMsg = rechargeTime ? ` You can send ${amountNum} KOIN in ${rechargeTime}.` : '';
+        const maxBalance = parseFloat(userMana.max);
+        const overBalance = amountNum > maxBalance ? ` (exceeds your balance of ${maxBalance.toFixed(4)} KOIN)` : '';
+        setError(`Amount exceeds your available mana (${currentMana.toFixed(4)} KOIN).${overBalance}${timeMsg} Mana regenerates over 5 days up to your KOIN balance.`);
+        return false;
+      }
+      // When paying own mana (no free mana), also reserve mana for the tx fee
+      if (manaEstimate && !useFreeMana) {
+        const remaining = currentMana - amountNum;
+        const manaCost = parseFloat(manaEstimate.koin);
+        if (remaining < manaCost) {
+          setError(`Insufficient mana after transfer for tx fee. You need to keep ≈${manaCost.toFixed(4)} KOIN of mana. Max send: ${(currentMana - manaCost * 1.5).toFixed(4)} KOIN`);
+          return false;
+        }
+      }
+    }
+
     return true;
   };
 
@@ -98,9 +265,22 @@ export default function SendScreen() {
 
     try {
       const normalizedAmount = amount.replace(',', '.');
+      console.log('\n========================================');
+      console.log('=== EXECUTE SEND CALLED ===');
+      console.log('========================================');
+      console.log('token:', token);
+      console.log('amount (raw input):', amount);
+      console.log('amount (normalized):', normalizedAmount);
+      console.log('toAddress:', toAddress.trim());
+      console.log('useFreeMana:', useFreeMana);
+      console.log('freeManaAvailable:', freeManaAvailable);
+      console.log('availableBalance:', availableBalance);
+      console.log('userMana:', JSON.stringify(userMana));
+      console.log('manaEstimate:', JSON.stringify(manaEstimate));
+      console.log('========================================\n');
       const result = token === 'VHP' 
-        ? await koinosService.sendVhp(signer, toAddress.trim(), normalizedAmount)
-        : await koinosService.sendKoin(signer, toAddress.trim(), normalizedAmount);
+        ? await koinosService.sendVhp(signer, toAddress.trim(), normalizedAmount, { useFreeMana })
+        : await koinosService.sendKoin(signer, toAddress.trim(), normalizedAmount, { useFreeMana });
 
       showAlert(
         'Success',
@@ -124,9 +304,10 @@ export default function SendScreen() {
       return;
     }
 
+    const freeManaNote = useFreeMana ? '\n\n⚡ Using free mana' : '';
     showAlert(
       'Confirm Transaction',
-      `Send ${amount.replace(',', '.')} ${token} to ${toAddress.substring(0, 16)}...?`,
+      `Send ${amount.replace(',', '.')} ${token} to ${toAddress.substring(0, 16)}...?${freeManaNote}`,
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Send', onPress: executeSend },
@@ -169,16 +350,12 @@ export default function SendScreen() {
         <Text style={styles.title}>Send {token}</Text>
 
         {fromAddress && (
-          <View style={styles.fromBox}>
+          <>
             <Text style={styles.fromLabel}>From:</Text>
-            <Text style={styles.fromAddress}>{fromAddress}</Text>
-          </View>
-        )}
-
-        {error && (
-          <View style={styles.errorBox}>
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
+            <View style={styles.fromBox}>
+              <Text style={styles.fromAddress}>{fromAddress}</Text>
+            </View>
+          </>
         )}
 
         <View style={styles.inputGroup}>
@@ -195,23 +372,110 @@ export default function SendScreen() {
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Amount ({token})</Text>
+          <View style={styles.amountLabelRow}>
+            <Text style={[styles.label, { marginBottom: 0 }]}>Amount ({token})</Text>
+            <View style={styles.availableRow}>
+              <Text style={styles.availableText}>{parseFloat(availableBalance).toFixed(4)}</Text>
+              <TouchableOpacity onPress={() => {
+                if (token === 'KOIN') {
+                  const bal = parseFloat(availableBalance);
+                  const currentMana = parseFloat(userMana.current);
+                  if (maxLevel === 0) {
+                    // MAX always uses free mana when available — ensures the full mana-capped amount is sendable
+                    const willUseFreeMana = freeManaAvailable;
+                    let maxSend = Math.min(bal, currentMana);
+                    if (!willUseFreeMana && manaEstimate) {
+                      const reserve = parseFloat(manaEstimate.koin) * 1.5;
+                      maxSend = Math.max(maxSend - reserve, 0);
+                    }
+                    const amt = maxSend.toFixed(8);
+                    maxSendableAmount.current = amt;
+                    setAmount(amt);
+                    if (willUseFreeMana) {
+                      setUseFreeMana(true);
+                    }
+                    if (bal > currentMana) {
+                      setMaxLevel(1);
+                    }
+                  } else if (maxLevel === 1) {
+                    setAmount(bal.toFixed(8));
+                    setMaxLevel(2);
+                    const rechargeTime = getManaRechargeTime(bal);
+                    setError(`Cannot send yet. Your mana (${currentMana.toFixed(4)}) is below the transfer amount (${bal.toFixed(4)} KOIN).${rechargeTime ? ` Wait ${rechargeTime} for mana to regenerate.` : ''} Mana recharges linearly over 5 days.`);
+                  } else if (maxLevel === 2) {
+                    setAmount(maxSendableAmount.current);
+                    setMaxLevel(1);
+                    setError(null);
+                  }
+                } else {
+                  setAmount(availableBalance);
+                }
+              }}>
+                <Text style={[styles.maxButton, maxLevel === 2 && token === 'KOIN' && styles.maxButtonOverride]}>MAX</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
           <TextInput
             style={styles.input}
             placeholder="0.00000000"
             placeholderTextColor="#666"
             value={amount}
-            onChangeText={setAmount}
+            onChangeText={(text) => { setAmount(text); setMaxLevel(0); setError(null); }}
             keyboardType="decimal-pad"
           />
         </View>
 
-        <View style={styles.info}>
-          <Text style={styles.infoText}>
-            Transaction will use your available mana (resource credits).
-            Make sure you have enough mana to complete the transaction.
-          </Text>
-        </View>
+        {token === 'KOIN' && (
+          <View style={styles.batterySection}>
+            <Text style={styles.batteryLabel}>Mana</Text>
+            <View style={styles.batteryContainer}>
+              <View style={styles.manaBar}>
+                {(() => {
+                  const maxFill = 152;
+                  const glowWidth = 4;
+                  const gap = 2;
+                  const fillPx = manaPercent >= 1
+                    ? maxFill
+                    : Math.round(manaPercent * (maxFill - gap - glowWidth));
+                  const glowLeft = 2 + fillPx + gap;
+                  const fillColor = manaPercent < 0.25
+                    ? 'rgba(255, 60, 60, 0.45)'
+                    : 'rgba(40, 167, 69, 0.45)';
+                  const glowColor = manaPercent < 0.25
+                    ? 'rgba(255, 60, 60, 0.45)'
+                    : 'rgba(40, 167, 69, 0.45)';
+                  return (
+                    <>
+                      <View
+                        style={[
+                          styles.manaFill,
+                          { width: fillPx, backgroundColor: fillColor },
+                        ]}
+                      />
+                      {manaPercent > 0 && manaPercent < 1 && (
+                        <Animated.View
+                          style={[
+                            styles.manaGlow,
+                            {
+                              left: glowLeft,
+                              width: glowWidth,
+                              backgroundColor: glowColor,
+                              opacity: glowOpacity,
+                            },
+                          ]}
+                        />
+                      )}
+                    </>
+                  );
+                })()}
+                <Text style={styles.manaBarText}>
+                  {Math.round(manaPercent * 100)}%
+                </Text>
+              </View>
+              <View style={styles.batteryCap} />
+            </View>
+          </View>
+        )}
 
         <TouchableOpacity
           style={[
@@ -239,6 +503,12 @@ export default function SendScreen() {
         >
           <Text style={styles.cancelButtonText}>Cancel</Text>
         </TouchableOpacity>
+
+        {error && (
+          <View style={styles.errorBox}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
       </ScrollView>
 
       {/* QR Scanner Modal */}
@@ -299,12 +569,12 @@ const styles = StyleSheet.create({
   },
   fromLabel: {
     color: '#888',
-    fontSize: 12,
-    marginBottom: 4,
+    fontSize: 20,
+    marginBottom: 6,
   },
   fromAddress: {
     color: '#4a9eff',
-    fontSize: 11,
+    fontSize: 20,
     fontFamily: 'monospace',
   },
   errorBox: {
@@ -315,14 +585,37 @@ const styles = StyleSheet.create({
   },
   errorText: {
     color: '#ff6b6b',
-    fontSize: 14,
+    fontSize: 20,
   },
   inputGroup: {
     marginBottom: 20,
   },
-  label: {
+  amountLabelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  availableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  availableText: {
     color: '#888',
     fontSize: 14,
+  },
+  maxButton: {
+    color: '#4a9eff',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  maxButtonOverride: {
+    color: '#ff6b6b',
+  },
+  label: {
+    color: '#888',
+    fontSize: 20,
     marginBottom: 8,
   },
   input: {
@@ -330,7 +623,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     color: '#fff',
-    fontSize: 16,
+    fontSize: 20,
     borderWidth: 1,
     borderColor: '#0f3460',
   },
@@ -346,7 +639,7 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 0,
     padding: 16,
     color: '#fff',
-    fontSize: 16,
+    fontSize: 20,
     borderWidth: 1,
     borderColor: '#0f3460',
     borderRightWidth: 0,
@@ -365,16 +658,63 @@ const styles = StyleSheet.create({
   scanButtonText: {
     fontSize: 20,
   },
-  info: {
-    backgroundColor: '#16213e',
-    padding: 15,
-    borderRadius: 12,
+  batterySection: {
+    alignItems: 'center',
     marginBottom: 30,
   },
-  infoText: {
+  batteryLabel: {
     color: '#888',
-    fontSize: 13,
-    lineHeight: 20,
+    fontSize: 14,
+    marginBottom: 8,
+  },
+  batteryContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  manaBar: {
+    backgroundColor: '#16213e',
+    borderRadius: 5,
+    height: 26,
+    overflow: 'hidden',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 160,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  batteryCap: {
+    width: 5,
+    height: 11,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    borderTopRightRadius: 2,
+    borderBottomRightRadius: 2,
+    marginLeft: 0,
+  },
+  manaFill: {
+    position: 'absolute',
+    left: 2,
+    top: 2,
+    bottom: 2,
+    borderTopLeftRadius: 4,
+    borderBottomLeftRadius: 4,
+    borderTopRightRadius: 0,
+    borderBottomRightRadius: 0,
+  },
+  manaGlow: {
+    position: 'absolute',
+    top: 2,
+    bottom: 2,
+    borderTopLeftRadius: 0,
+    borderBottomLeftRadius: 0,
+    borderTopRightRadius: 4,
+    borderBottomRightRadius: 4,
+  },
+  manaBarText: {
+    color: 'rgba(255, 255, 255, 0.6)',
+    fontSize: 12,
+    fontWeight: '600',
+    zIndex: 1,
   },
   sendButton: {
     backgroundColor: '#4a9eff',
@@ -391,7 +731,7 @@ const styles = StyleSheet.create({
   },
   sendButtonText: {
     color: '#fff',
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '600',
   },
   cancelButton: {
@@ -400,7 +740,7 @@ const styles = StyleSheet.create({
   },
   cancelButtonText: {
     color: '#666',
-    fontSize: 16,
+    fontSize: 20,
   },
   // Scanner styles
   scannerContainer: {
