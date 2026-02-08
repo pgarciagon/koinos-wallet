@@ -101,6 +101,11 @@ export class WalletService {
 
   // Load wallet from secure storage
   async loadWallet(): Promise<WalletInfo> {
+    // Return cached wallet if already loaded
+    if (this.signer && this.address) {
+      return { address: this.address, hasWallet: true };
+    }
+
     try {
       const stored = await storage.getItem(WALLET_KEY);
       const address = await storage.getItem(WALLET_ADDRESS_KEY);
@@ -181,6 +186,14 @@ export class WalletService {
 
     // It's a mnemonic
     return stored;
+  }
+
+  // Get the private key in WIF format
+  getPrivateKey(): string | null {
+    if (!this.signer) {
+      return null;
+    }
+    return this.signer.getPrivateKey('wif');
   }
 
   // Check if the wallet has a seed phrase (vs WIF import)

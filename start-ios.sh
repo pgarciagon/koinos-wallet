@@ -28,4 +28,4 @@ sleep 5
 
 # Start Expo with localhost (avoids network timeout issues)
 echo "🔄 Starting Metro bundler..."
-npx expo start --ios --localhost
+npx expo start --ios --localhost --go

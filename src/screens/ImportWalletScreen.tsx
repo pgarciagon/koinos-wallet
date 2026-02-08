@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
   },
   methodButtonText: {
     color: '#888',
-    fontSize: 14,
+    fontSize: 20,
     fontWeight: '500',
   },
   methodButtonTextActive: {
@@ -202,7 +202,7 @@ const styles = StyleSheet.create({
   },
   label: {
     color: '#888',
-    fontSize: 14,
+    fontSize: 20,
     marginBottom: 8,
   },
   input: {
@@ -210,7 +210,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     color: '#fff',
-    fontSize: 16,
+    fontSize: 20,
     borderWidth: 1,
     borderColor: '#0f3460',
   },
@@ -220,9 +220,9 @@ const styles = StyleSheet.create({
   },
   hint: {
     color: '#666',
-    fontSize: 12,
+    fontSize: 18,
     marginTop: 8,
-    lineHeight: 18,
+    lineHeight: 24,
   },
   warning: {
     backgroundColor: '#3d1a1a',
@@ -232,8 +232,8 @@ const styles = StyleSheet.create({
   },
   warningText: {
     color: '#ff9999',
-    fontSize: 13,
-    lineHeight: 20,
+    fontSize: 18,
+    lineHeight: 26,
   },
   primaryButton: {
     backgroundColor: '#4a9eff',
@@ -247,7 +247,7 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     color: '#fff',
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '600',
   },
   cancelButton: {
@@ -256,6 +256,6 @@ const styles = StyleSheet.create({
   },
   cancelButtonText: {
     color: '#666',
-    fontSize: 16,
+    fontSize: 20,
   },
 });

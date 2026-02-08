@@ -25,12 +25,15 @@ const mockGetBalance = jest.fn();
 const mockGetMana = jest.fn();
 const mockGetVhpBalance = jest.fn();
 
+const mockEstimateTransferCost = jest.fn();
+
 jest.mock('../src/services/koinos', () => ({
   __esModule: true,
   default: {
     getBalance: (...args: any[]) => mockGetBalance(...args),
     getMana: (...args: any[]) => mockGetMana(...args),
     getVhpBalance: (...args: any[]) => mockGetVhpBalance(...args),
+    estimateTransferCost: (...args: any[]) => mockEstimateTransferCost(...args),
   },
 }));
 
@@ -45,6 +48,7 @@ jest.mock('../src/utils/platform', () => ({
 describe('HomeScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockEstimateTransferCost.mockResolvedValue({ rcEstimate: '44427114', koinEstimate: '0.44427114' });
   });
 
   it('redirects to Welcome when no wallet exists', async () => {

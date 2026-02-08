@@ -7,6 +7,8 @@ import {
   RefreshControl,
   ScrollView,
   Image,
+  Animated,
+  Easing,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import koinosService from '../services/koinos';
@@ -22,6 +24,36 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selectedToken, setSelectedToken] = useState<'KOIN' | 'VHP'>('KOIN');
+  const [estimatedTransfers, setEstimatedTransfers] = useState<number | null>(null);
+  const pulseAnim = useRef(new Animated.Value(0.5)).current;
+
+  const manaPercent = parseFloat(mana.max) > 0
+    ? parseFloat(mana.current) / parseFloat(mana.max)
+    : 0;
+
+  useEffect(() => {
+    if (manaPercent < 1) {
+      pulseAnim.setValue(0);
+      const pulse = Animated.loop(
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 6000,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        })
+      );
+      pulse.start();
+      return () => pulse.stop();
+    } else {
+      pulseAnim.setValue(0);
+    }
+  }, [manaPercent < 1]);
+
+  // Seamless sine wave: 0→0.5→1→0.5→0 maps to 0.5→0.8→0.5→0.8→0.5
+  const glowOpacity = pulseAnim.interpolate({
+    inputRange: [0, 0.25, 0.5, 0.75, 1],
+    outputRange: [0.5, 0.8, 0.5, 0.8, 0.5],
+  });
 
   const loadData = useCallback(async () => {
     try {
@@ -43,8 +75,22 @@ export default function HomeScreen() {
       setBalance(bal);
       setVhpBalance(vhp);
       setMana(rc);
+
+      // Estimate how many transfers the user can afford
+      try {
+        const cost = await koinosService.estimateTransferCost();
+        const koinPerTransfer = parseFloat(cost.koinEstimate);
+        const currentMana = parseFloat(rc.current);
+        if (koinPerTransfer > 0) {
+          setEstimatedTransfers(Math.floor(currentMana / koinPerTransfer));
+        } else {
+          setEstimatedTransfers(null);
+        }
+      } catch {
+        setEstimatedTransfers(null);
+      }
     } catch (error) {
-      console.error('Error loading data:', error);
+      if (__DEV__) console.error('Error loading data:', error);
     } finally {
       setLoading(false);
     }
@@ -112,7 +158,7 @@ export default function HomeScreen() {
         </View>
         <TouchableOpacity onPress={copyAddress} style={styles.addressContainer}>
           <Text style={styles.addressLabel}>Your Address</Text>
-          <Text style={styles.address}>{formatAddress(address)}</Text>
+          <Text style={styles.address}>{address}</Text>
           <Text style={styles.tapToCopy}>Tap to copy</Text>
         </TouchableOpacity>
       </View>
@@ -139,25 +185,53 @@ export default function HomeScreen() {
         </View>
       </TouchableOpacity>
 
-      <View style={styles.manaCard}>
-        <Text style={styles.manaLabel}>Mana (Resource Credits)</Text>
+      <View style={styles.batteryContainer}>
         <View style={styles.manaBar}>
-          <View
-            style={[
-              styles.manaFill,
-              {
-                width: `${
-                  parseFloat(mana.max) > 0
-                    ? Math.min((parseFloat(mana.current) / parseFloat(mana.max)) * 100, 100)
-                    : 0
-                }%`,
-              },
-            ]}
-          />
+          {/* Battery inner area: 156px (160-2*2 border), 2px inset each side = 152px usable */}
+          {(() => {
+            const maxFill = 152; // usable inner width
+            const glowWidth = 4;
+            const gap = 2;
+            // When glow is visible, fill only grows up to (maxFill - gap - glowWidth)
+            const fillPx = manaPercent >= 1
+              ? maxFill
+              : Math.round(manaPercent * (maxFill - gap - glowWidth));
+            const glowLeft = 2 + fillPx + gap; // inset + fill + gap
+            const fillColor = manaPercent < 0.25
+              ? 'rgba(255, 60, 60, 0.45)'
+              : 'rgba(40, 167, 69, 0.45)';
+            const glowColor = manaPercent < 0.25
+              ? 'rgba(255, 60, 60, 0.45)'
+              : 'rgba(40, 167, 69, 0.45)';
+            return (
+              <>
+                <View
+                  style={[
+                    styles.manaFill,
+                    { width: fillPx, backgroundColor: fillColor },
+                  ]}
+                />
+                {manaPercent > 0 && manaPercent < 1 && (
+                  <Animated.View
+                    style={[
+                      styles.manaGlow,
+                      {
+                        left: glowLeft,
+                        width: glowWidth,
+                        backgroundColor: glowColor,
+                        opacity: glowOpacity,
+                      },
+                    ]}
+                  />
+                )}
+              </>
+            );
+          })()}
+          <Text style={styles.manaBarText}>
+            {Math.round(manaPercent * 100)}%
+          </Text>
         </View>
-        <Text style={styles.manaText}>
-          {parseFloat(mana.current).toFixed(4)} / {parseFloat(mana.max).toFixed(4)}
-        </Text>
+        <View style={styles.batteryCap} />
       </View>
 
       <View style={styles.actions}>
@@ -226,12 +300,12 @@ const styles = StyleSheet.create({
   },
   addressLabel: {
     color: '#888',
-    fontSize: 12,
+    fontSize: 20,
     marginBottom: 5,
   },
   address: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 20,
     fontFamily: 'monospace',
   },
   tapToCopy: {
@@ -255,7 +329,7 @@ const styles = StyleSheet.create({
   },
   balanceLabel: {
     color: '#888',
-    fontSize: 14,
+    fontSize: 18,
   },
   balanceValueRow: {
     flexDirection: 'row',
@@ -286,7 +360,7 @@ const styles = StyleSheet.create({
   },
   vhpLabel: {
     color: '#888',
-    fontSize: 14,
+    fontSize: 18,
   },
   vhpValueRow: {
     flexDirection: 'row',
@@ -301,33 +375,57 @@ const styles = StyleSheet.create({
     color: '#9b59b6',
     fontSize: 14,
   },
-  manaCard: {
-    backgroundColor: '#16213e',
-    padding: 20,
-    borderRadius: 12,
+  batteryContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'center',
     marginBottom: 30,
   },
-  manaLabel: {
-    color: '#888',
-    fontSize: 14,
-    marginBottom: 10,
-  },
   manaBar: {
-    height: 8,
-    backgroundColor: '#0a0a1a',
-    borderRadius: 4,
+    backgroundColor: '#16213e',
+    borderRadius: 5,
+    height: 26,
     overflow: 'hidden',
-    marginBottom: 8,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 160,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  batteryCap: {
+    width: 5,
+    height: 11,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    borderTopRightRadius: 2,
+    borderBottomRightRadius: 2,
+    marginLeft: 0,
   },
   manaFill: {
-    height: '100%',
-    backgroundColor: '#4a9eff',
-    borderRadius: 4,
+    position: 'absolute',
+    left: 2,
+    top: 2,
+    bottom: 2,
+    backgroundColor: 'rgba(255, 60, 60, 0.35)',
+    borderTopLeftRadius: 4,
+    borderBottomLeftRadius: 4,
+    borderTopRightRadius: 0,
+    borderBottomRightRadius: 0,
   },
-  manaText: {
-    color: '#fff',
+  manaGlow: {
+    position: 'absolute',
+    top: 2,
+    bottom: 2,
+    borderTopLeftRadius: 0,
+    borderBottomLeftRadius: 0,
+    borderTopRightRadius: 4,
+    borderBottomRightRadius: 4,
+  },
+  manaBarText: {
+    color: 'rgba(255, 255, 255, 0.6)',
     fontSize: 12,
-    textAlign: 'center',
+    fontWeight: '600',
+    zIndex: 1,
   },
   actions: {
     flexDirection: 'row',
@@ -370,12 +468,12 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 20,
     fontWeight: '600',
   },
   buttonTextSecondary: {
     color: '#4a9eff',
-    fontSize: 16,
+    fontSize: 20,
     fontWeight: '600',
   },
   buttonTextSecondaryVhp: {
@@ -394,7 +492,7 @@ const styles = StyleSheet.create({
   },
   settingsButtonText: {
     color: '#4a9eff',
-    fontSize: 16,
+    fontSize: 20,
     fontWeight: '600',
   },
   loadingText: {

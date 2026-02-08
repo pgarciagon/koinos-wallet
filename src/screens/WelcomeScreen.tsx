@@ -8,12 +8,10 @@ export default function WelcomeScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <View style={styles.logoWrapper}>
-          <Image
-            source={require('../../assets/koinos-logo-white.png')}
-            style={styles.logo}
-          />
-        </View>
+        <Image
+          source={require('../../assets/konios-logomark-set/koinos-logomark-white@large.png')}
+          style={styles.logo}
+        />
         <Text style={styles.title}>Koinos Wallet</Text>
         <Text style={styles.subtitle}>
           A simple wallet for the Koinos blockchain
@@ -47,15 +45,6 @@ export default function WelcomeScreen() {
           </Text>
           {' '}Foundation App
         </Text>
-        <Text style={styles.footer}>
-          Powered by{' '}
-          <Text
-            style={styles.footerLink}
-            onPress={() => Linking.openURL('https://github.com/joticajulian/koilib')}
-          >
-            koilib
-          </Text>
-        </Text>
       </View>
     </View>
   );
@@ -72,19 +61,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 100,
   },
-  logoWrapper: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: '#16213e',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
-  },
   logo: {
-    width: 72,
-    height: 72,
+    width: 120,
+    height: 133,
     resizeMode: 'contain',
+    marginBottom: 20,
   },
   title: {
     fontSize: 32,
@@ -93,7 +74,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 18,
     color: '#888',
     textAlign: 'center',
   },
@@ -108,7 +89,7 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     color: '#fff',
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '600',
   },
   secondaryButton: {
@@ -121,7 +102,7 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: {
     color: '#4a9eff',
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '600',
   },
   footerContainer: {
@@ -131,13 +112,13 @@ const styles = StyleSheet.create({
   footer: {
     color: '#444',
     textAlign: 'center',
-    fontSize: 12,
+    fontSize: 18,
     marginBottom: 2,
   },
   footerLink: {
     color: '#666',
     textAlign: 'center',
-    fontSize: 12,
+    fontSize: 18,
     marginBottom: 2,
   },
 });

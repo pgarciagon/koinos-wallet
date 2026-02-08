@@ -11,7 +11,9 @@ import SettingsScreen from './src/screens/SettingsScreen';
 import WelcomeScreen from './src/screens/WelcomeScreen';
 import CreateWalletScreen from './src/screens/CreateWalletScreen';
 import ImportWalletScreen from './src/screens/ImportWalletScreen';
+import LockScreen from './src/screens/LockScreen';
 import walletService from './src/services/wallet';
+import authService from './src/services/auth';
 
 export type RootStackParamList = {
   Welcome: undefined;
@@ -27,20 +29,40 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function App() {
   const [initialRoute, setInitialRoute] = useState<keyof RootStackParamList | null>(null);
+  const [isLocked, setIsLocked] = useState<boolean | null>(null); // null = loading
 
   useEffect(() => {
-    const checkWallet = async () => {
+    const init = async () => {
       const hasWallet = await walletService.hasWallet();
       setInitialRoute(hasWallet ? 'Home' : 'Welcome');
+
+      // Only show lock screen if wallet exists AND lock is enabled
+      if (hasWallet) {
+        const lockEnabled = await authService.isLockEnabled();
+        setIsLocked(lockEnabled);
+      } else {
+        setIsLocked(false);
+      }
     };
-    checkWallet();
+    init();
   }, []);
 
-  if (!initialRoute) {
+  // Still loading
+  if (initialRoute === null || isLocked === null) {
     return (
       <View style={styles.loading}>
         <ActivityIndicator size="large" color="#4a9eff" />
         <StatusBar style="light" />
+      </View>
+    );
+  }
+
+  // App is locked — show lock screen over everything
+  if (isLocked) {
+    return (
+      <View style={styles.loading}>
+        <StatusBar style="light" />
+        <LockScreen onUnlock={() => setIsLocked(false)} />
       </View>
     );
   }

@@ -156,11 +156,11 @@ const styles = StyleSheet.create({
     marginTop: 60,
   },
   description: {
-    fontSize: 16,
+    fontSize: 18,
     color: '#888',
     textAlign: 'center',
     marginBottom: 30,
-    lineHeight: 24,
+    lineHeight: 26,
     paddingHorizontal: 20,
   },
   warning: {
@@ -172,14 +172,14 @@ const styles = StyleSheet.create({
   },
   warningTitle: {
     color: '#ff6b6b',
-    fontSize: 16,
+    fontSize: 20,
     fontWeight: '600',
     marginBottom: 10,
   },
   warningText: {
     color: '#ff9999',
-    fontSize: 14,
-    lineHeight: 22,
+    fontSize: 18,
+    lineHeight: 26,
   },
   mnemonicContainer: {
     flexDirection: 'row',
@@ -200,13 +200,13 @@ const styles = StyleSheet.create({
   },
   wordNumber: {
     color: '#4a9eff',
-    fontSize: 12,
+    fontSize: 16,
     marginRight: 8,
     fontWeight: '600',
   },
   word: {
     color: '#fff',
-    fontSize: 14,
+    fontSize: 20,
     fontWeight: '500',
   },
   addressPreview: {
@@ -217,12 +217,12 @@ const styles = StyleSheet.create({
   },
   addressLabel: {
     color: '#888',
-    fontSize: 12,
+    fontSize: 20,
     marginBottom: 5,
   },
   addressText: {
     color: '#fff',
-    fontSize: 12,
+    fontSize: 20,
     fontFamily: 'monospace',
   },
   checkboxRow: {
@@ -254,7 +254,7 @@ const styles = StyleSheet.create({
   },
   checkboxLabel: {
     color: '#fff',
-    fontSize: 14,
+    fontSize: 20,
     flex: 1,
   },
   primaryButton: {
@@ -270,7 +270,7 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     color: '#fff',
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '600',
   },
   cancelButton: {
@@ -279,6 +279,6 @@ const styles = StyleSheet.create({
   },
   cancelButtonText: {
     color: '#666',
-    fontSize: 16,
+    fontSize: 20,
   },
 });
