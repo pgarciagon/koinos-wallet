@@ -15,8 +15,11 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.koinos.wallet",
+      "buildNumber": "1",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSFaceIDUsageDescription": "Use Face ID to unlock the app",
+        "NSCameraUsageDescription": "Scan QR codes for wallet addresses"
       }
     },
     "android": {

@@ -88,31 +88,26 @@ export default function SendScreen() {
           if (signer) {
             const addr = signer.getAddress();
             setFromAddress(addr);
-            console.log('SendScreen - Signer address:', addr);
-            console.log('SendScreen - Stored address:', info.address);
 
             // Fetch available balance
             try {
               const bal = token === 'VHP'
                 ? await koinosService.getVhpBalance(addr)
                 : await koinosService.getBalance(addr);
-              console.log('=== WALLET LOAD: BALANCE ===');
-              console.log('Token:', token, 'Balance fetched:', bal);
               setAvailableBalance(bal);
             } catch (e) {
-              console.error('Error fetching balance:', e);
+              if (__DEV__) console.error('Error fetching balance:', e);
             }
 
             // Check free mana sharer availability
             try {
               const freeStatus = await koinosService.getFreeManaAvailable();
-              console.log('Free mana check result:', JSON.stringify(freeStatus));
               setFreeManaAvailable(freeStatus.available);
               setFreeManaStatus(freeStatus.available 
                 ? `available (${parseFloat(freeStatus.mana).toFixed(2)} mana)` 
                 : `unavailable (${freeStatus.mana} mana)`);
             } catch (e: any) {
-              console.error('Error checking free mana:', e);
+              if (__DEV__) console.error('Error checking free mana:', e);
               setFreeManaStatus(`error: ${e.message || 'unknown'}`);
             }
 
@@ -122,9 +117,6 @@ export default function SendScreen() {
                 koinosService.estimateTransferCost(),
                 koinosService.getMana(addr),
               ]);
-              console.log('=== WALLET LOAD: MANA ===');
-              console.log('Mana object:', JSON.stringify(mana));
-              console.log('Estimate object:', JSON.stringify(estimate));
               setUserMana(mana);
               const currentMana = parseFloat(mana.current);
               const estimateKoin = parseFloat(estimate.koinEstimate);
@@ -136,7 +128,7 @@ export default function SendScreen() {
                 percent,
               });
             } catch (e) {
-              console.error('Error estimating mana:', e);
+              if (__DEV__) console.error('Error estimating mana:', e);
             }
           }
         } else {
@@ -158,19 +150,12 @@ export default function SendScreen() {
     const manaCost = parseFloat(manaEstimate.koin);
     const currentMana = parseFloat(userMana.current);
 
-    console.log('=== AUTO-DETECT FREE MANA ===');
-    console.log('token:', token, 'sendAmt:', sendAmt, 'manaCost:', manaCost, 'currentMana:', currentMana);
-    console.log('availableBalance:', availableBalance, 'freeManaAvailable:', freeManaAvailable);
-
     if (token === 'KOIN') {
       // Self-pay RC cost = transferAmount + txFee. Enable free mana when that exceeds available mana.
       const needs = (sendAmt + manaCost * 1.5) > currentMana && sendAmt > 0;
-      console.log('KOIN: sendAmt + txFee:', sendAmt + manaCost * 1.5, 'currentMana:', currentMana, 'needs:', needs);
-      console.log('Setting useFreeMana to:', needs && freeManaAvailable);
       setUseFreeMana(needs && freeManaAvailable);
     } else {
       const needs = currentMana < manaCost * 3 && sendAmt > 0;
-      console.log('VHP: needs:', needs, 'Setting useFreeMana to:', needs && freeManaAvailable);
       setUseFreeMana(needs && freeManaAvailable);
     }
   }, [amount, manaEstimate, userMana, availableBalance, token, freeManaAvailable, fromAddress]);
@@ -226,11 +211,6 @@ export default function SendScreen() {
     // The user can only send up to their current mana in KOIN.
     if (token === 'KOIN') {
       const currentMana = parseFloat(userMana.current);
-      console.log('=== VALIDATION DEBUG ===');
-      console.log('Amount to send:', amountNum);
-      console.log('Current mana:', currentMana);
-      console.log('Available balance:', availableBalance);
-      console.log('Use free mana:', useFreeMana);
       if (amountNum > currentMana) {
         const rechargeTime = getManaRechargeTime(amountNum);
         const timeMsg = rechargeTime ? ` You can send ${amountNum} KOIN in ${rechargeTime}.` : '';
@@ -265,19 +245,6 @@ export default function SendScreen() {
 
     try {
       const normalizedAmount = amount.replace(',', '.');
-      console.log('\n========================================');
-      console.log('=== EXECUTE SEND CALLED ===');
-      console.log('========================================');
-      console.log('token:', token);
-      console.log('amount (raw input):', amount);
-      console.log('amount (normalized):', normalizedAmount);
-      console.log('toAddress:', toAddress.trim());
-      console.log('useFreeMana:', useFreeMana);
-      console.log('freeManaAvailable:', freeManaAvailable);
-      console.log('availableBalance:', availableBalance);
-      console.log('userMana:', JSON.stringify(userMana));
-      console.log('manaEstimate:', JSON.stringify(manaEstimate));
-      console.log('========================================\n');
       const result = token === 'VHP' 
         ? await koinosService.sendVhp(signer, toAddress.trim(), normalizedAmount, { useFreeMana })
         : await koinosService.sendKoin(signer, toAddress.trim(), normalizedAmount, { useFreeMana });

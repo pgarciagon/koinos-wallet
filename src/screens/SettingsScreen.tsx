@@ -12,8 +12,10 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import koinosService from '../services/koinos';
 import walletService from '../services/wallet';
+import authService from '../services/auth';
 import { showAlert, copyToClipboard } from '../utils/platform';
 import { APP_VERSION, CHANGELOG } from '../data/changelog';
+import SetupPinScreen from './SetupPinScreen';
 
 export default function SettingsScreen() {
   const navigation = useNavigation<any>();
@@ -25,12 +27,32 @@ export default function SettingsScreen() {
   const [showPrivateKey, setShowPrivateKey] = useState(false);
   const [privateKey, setPrivateKey] = useState<string | null>(null);
 
+  // App lock state
+  const [lockEnabled, setLockEnabled] = useState(false);
+  const [biometricsEnabled, setBiometricsEnabled] = useState(false);
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [biometricLabel, setBiometricLabel] = useState('Biometrics');
+  const [showPinSetup, setShowPinSetup] = useState(false);
+  const [showPinChange, setShowPinChange] = useState(false);
+
   useEffect(() => {
-    const loadRpc = async () => {
+    const loadSettings = async () => {
       const current = await koinosService.getRpcUrl();
       setRpcUrl(current);
+
+      // Load lock settings
+      const isLocked = await authService.isLockEnabled();
+      setLockEnabled(isLocked);
+      const bioEnabled = await authService.isBiometricsEnabled();
+      setBiometricsEnabled(bioEnabled);
+      const bioAvail = await authService.isBiometricAvailable();
+      setBiometricAvailable(bioAvail);
+      if (bioAvail) {
+        const label = await authService.getBiometricLabel();
+        setBiometricLabel(label);
+      }
     };
-    loadRpc();
+    loadSettings();
   }, []);
 
   const handleSaveRpc = async () => {
@@ -115,6 +137,88 @@ export default function SettingsScreen() {
     }
   };
 
+  // --- App Lock Handlers ---
+
+  const handleToggleLock = () => {
+    if (lockEnabled) {
+      // Disable lock
+      showAlert(
+        'Disable App Lock?',
+        'The app will no longer require a PIN or biometrics to open.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Disable',
+            style: 'destructive',
+            onPress: async () => {
+              await authService.disableLock();
+              setLockEnabled(false);
+              setBiometricsEnabled(false);
+              showAlert('Disabled', 'App lock has been removed.');
+            },
+          },
+        ]
+      );
+    } else {
+      // Enable lock — show PIN setup
+      setShowPinSetup(true);
+    }
+  };
+
+  const handlePinSetupComplete = async (pin: string) => {
+    await authService.setPin(pin);
+    await authService.enableLock();
+    setLockEnabled(true);
+    setShowPinSetup(false);
+    showAlert('App Lock Enabled', 'Your wallet is now protected with a PIN.');
+
+    // If biometrics available, offer to enable
+    if (biometricAvailable) {
+      showAlert(
+        `Enable ${biometricLabel}?`,
+        `Would you like to use ${biometricLabel} to unlock the app?`,
+        [
+          { text: 'No, just PIN', style: 'cancel' },
+          {
+            text: `Enable ${biometricLabel}`,
+            onPress: async () => {
+              await authService.enableBiometrics();
+              setBiometricsEnabled(true);
+            },
+          },
+        ]
+      );
+    }
+  };
+
+  const handleToggleBiometrics = async () => {
+    if (biometricsEnabled) {
+      await authService.disableBiometrics();
+      setBiometricsEnabled(false);
+    } else {
+      // Verify biometrics works before enabling
+      const success = await authService.authenticateWithBiometrics(
+        `Verify ${biometricLabel} to enable`
+      );
+      if (success) {
+        await authService.enableBiometrics();
+        setBiometricsEnabled(true);
+      } else {
+        showAlert('Failed', `${biometricLabel} verification failed. Please try again.`);
+      }
+    }
+  };
+
+  const handleChangePin = () => {
+    setShowPinChange(true);
+  };
+
+  const handleChangePinComplete = async (newPin: string) => {
+    await authService.setPin(newPin);
+    setShowPinChange(false);
+    showAlert('PIN Changed', 'Your PIN has been updated.');
+  };
+
   const handleDeleteWallet = () => {
     showAlert(
       'Delete Wallet?',
@@ -165,6 +269,40 @@ export default function SettingsScreen() {
         >
           <Text style={styles.saveButtonText}>{saving ? 'Saving...' : 'Save RPC URL'}</Text>
         </TouchableOpacity>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>App Lock</Text>
+        <Text style={styles.sectionDescription}>
+          Protect your wallet with a PIN{biometricAvailable ? ` and ${biometricLabel}` : ''}.
+        </Text>
+        <TouchableOpacity
+          style={[styles.toggleRow]}
+          onPress={handleToggleLock}
+        >
+          <Text style={styles.toggleLabel}>Require PIN to open</Text>
+          <View style={[styles.toggleSwitch, lockEnabled && styles.toggleSwitchOn]}>
+            <View style={[styles.toggleKnob, lockEnabled && styles.toggleKnobOn]} />
+          </View>
+        </TouchableOpacity>
+
+        {lockEnabled && biometricAvailable && (
+          <TouchableOpacity
+            style={styles.toggleRow}
+            onPress={handleToggleBiometrics}
+          >
+            <Text style={styles.toggleLabel}>Unlock with {biometricLabel}</Text>
+            <View style={[styles.toggleSwitch, biometricsEnabled && styles.toggleSwitchOn]}>
+              <View style={[styles.toggleKnob, biometricsEnabled && styles.toggleKnobOn]} />
+            </View>
+          </TouchableOpacity>
+        )}
+
+        {lockEnabled && (
+          <TouchableOpacity style={styles.secondaryButton} onPress={handleChangePin}>
+            <Text style={styles.secondaryButtonText}>Change PIN</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <View style={styles.section}>
@@ -302,6 +440,32 @@ export default function SettingsScreen() {
             </TouchableOpacity>
           </View>
         </View>
+      </Modal>
+
+      {/* PIN Setup Modal (full screen) */}
+      <Modal
+        visible={showPinSetup}
+        animationType="slide"
+        onRequestClose={() => setShowPinSetup(false)}
+      >
+        <SetupPinScreen
+          onComplete={handlePinSetupComplete}
+          onCancel={() => setShowPinSetup(false)}
+        />
+      </Modal>
+
+      {/* PIN Change Modal (full screen) */}
+      <Modal
+        visible={showPinChange}
+        animationType="slide"
+        onRequestClose={() => setShowPinChange(false)}
+      >
+        <SetupPinScreen
+          requireCurrent
+          currentPinVerify={(pin) => authService.verifyPin(pin)}
+          onComplete={handleChangePinComplete}
+          onCancel={() => setShowPinChange(false)}
+        />
       </Modal>
 
     </ScrollView>
@@ -527,5 +691,39 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
     lineHeight: 22,
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1a1a2e',
+  },
+  toggleLabel: {
+    color: '#fff',
+    fontSize: 18,
+    flex: 1,
+  },
+  toggleSwitch: {
+    width: 50,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#333',
+    justifyContent: 'center',
+    paddingHorizontal: 2,
+  },
+  toggleSwitchOn: {
+    backgroundColor: '#4a9eff',
+  },
+  toggleKnob: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#fff',
+  },
+  toggleKnobOn: {
+    alignSelf: 'flex-end',
   },
 });
